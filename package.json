@@ -65,6 +65,6 @@
   },
   "dependencies": {
     "@chatie/grpc": "^0.2.4",
-    "read-pkg-up": "^4.0.0"
+    "read-pkg-up": "^5.0.0"
   }
 }
