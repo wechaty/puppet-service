@@ -164,7 +164,8 @@ export class PuppetHostie extends Puppet {
     try {
       const result = await Promise.race<Promise<{ ip: string, port: number }>>([
         ...CHATIE_ENDPOINT_LIST.map(endpoint => this.getHostieIp(endpoint, token)),
-        new Promise((_resolve, reject) => setTimeout(reject, 30 * 1000)),
+        // eslint-disable-next-line promise/param-names
+        new Promise((_, reject) => setTimeout(reject, 30 * 1000)),
       ])
       return result
     } catch (e) {
