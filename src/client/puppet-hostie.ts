@@ -467,7 +467,7 @@ export class PuppetHostie extends Puppet {
 
     if (!this.grpcClient) {
       log.info('PuppetHostie', `ding() Skip ding since grpcClient is not connected.`)
-      return;
+      return
     }
 
     this.grpcClient.ding(
