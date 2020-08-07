@@ -198,7 +198,9 @@ export class PuppetHostie extends Puppet {
     if (!endpoint) {
       const { ip, port } = await this.discoverHostieIp(this.options.token!)
       if (!ip || ip === '0.0.0.0') {
-        throw new Error('no endpoint')
+        log.warn('No endpoint when starting grpc client, reconnecting in 10 seconds...')
+        await new Promise(resolve => setTimeout(resolve, 10 * 1000))
+        return this.startGrpcClient()
       }
       endpoint = ip + ':' + port
     }
@@ -432,7 +434,8 @@ export class PuppetHostie extends Puppet {
     log.verbose('PuppetHostie', 'stopGrpcStream()')
 
     if (!this.eventStream) {
-      throw new Error('no event stream')
+      log.verbose('PuppetHostie', 'no eventStream when stop, skip destroy.')
+      return
     }
 
     /**
