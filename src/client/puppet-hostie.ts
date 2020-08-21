@@ -35,6 +35,7 @@ import {
   EventRoomTopicPayload,
   EventScanPayload,
   EventErrorPayload,
+  PayloadType,
 }                         from 'wechaty-puppet'
 
 import {
@@ -91,6 +92,7 @@ import {
   DingRequest,
 
   EventType,
+  DirtyPayloadRequest,
 }                                   from '@chatie/grpc'
 
 import { Subscription } from 'rxjs'
@@ -110,6 +112,7 @@ import {
 import {
   recover$,
 }             from './recover$'
+import { EventDirtyPayload } from 'wechaty-puppet/dist/src/schemas/event'
 
 const MAX_HOSTIE_IP_DISCOVERY_RETRIES = 10
 
@@ -417,6 +420,9 @@ export class PuppetHostie extends Puppet {
         this.id = undefined
         this.emit('logout', JSON.parse(payload) as EventLogoutPayload)
         break
+      case EventType.EVENT_TYPE_DIRTY:
+        this.emit('dirty', JSON.parse(payload) as EventDirtyPayload)
+        break
       case EventType.EVENT_TYPE_MESSAGE:
         this.emit('message', JSON.parse(payload) as EventMessagePayload)
         break
@@ -512,6 +518,26 @@ export class PuppetHostie extends Puppet {
     )
   }
 
+  async dirtyPayload (type: PayloadType, id: string) {
+    await super.dirtyPayload(type, id)
+    if (!this.grpcClient) {
+      throw new Error('PuppetHostie dirtyPayload() can not execute due to no grpcClient.')
+    }
+    const request = new DirtyPayloadRequest()
+    request.setId(id)
+    request.setType(type)
+    try {
+      await util.promisify(
+        this.grpcClient.dirtyPayload.bind(this.grpcClient)
+          .bind(this.grpcClient)
+      )(request)
+
+    } catch (e) {
+      log.error('PuppetHostie', 'dirtyPayload() rejection: %s', e && e.message)
+      throw e
+    }
+  }
+
   public unref (): void {
     log.verbose('PuppetHostie', 'unref()')
     super.unref()
@@ -561,6 +587,12 @@ export class PuppetHostie extends Puppet {
     await util.promisify(
       this.grpcClient!.contactAlias.bind(this.grpcClient)
     )(request)
+  }
+
+  public async contactPhone (contactId: string): Promise<string[]>
+  public async contactPhone (contactId: string, phoneList: string[]): Promise<void>
+  public async contactPhone (contactId: string, phoneList?: string[]): Promise<string[] | void> {
+    throw new Error(`Method not implemented. contactId: ${contactId}, phoneList: ${phoneList}`)
   }
 
   public async contactList (): Promise<string[]> {

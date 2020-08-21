@@ -66,6 +66,7 @@ import {
   FriendshipSceneType,
   EventScanPayload,
   EventReadyPayload,
+  PayloadType,
 }                                   from 'wechaty-puppet'
 
 import { log } from '../config'
@@ -282,6 +283,19 @@ export function puppetImplementation (
 
       } catch (e) {
         return grpcError('ding', e, callback)
+      }
+    },
+
+    dirtyPayload: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'dirtyPayload()')
+
+      try {
+        const id = call.request.getId()
+        const type: PayloadType = call.request.getType()
+
+        await puppet.dirtyPayload(type, id)
+      } catch (e) {
+        return grpcError('dirtyPayload', e, callback)
       }
     },
 
