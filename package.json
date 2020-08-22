@@ -53,14 +53,14 @@
     "shx": "^0.3.2",
     "tstest": "^0.4.10",
     "wechaty": "^0.46.4",
-    "wechaty-puppet": "^0.31.6",
+    "wechaty-puppet": "^0.32.2",
     "wechaty-puppet-mock": "^0.27.11"
   },
   "peerDependencies": {
-    "wechaty-puppet": "^0.31.6"
+    "wechaty-puppet": "^0.32.2"
   },
   "dependencies": {
-    "@chatie/grpc": "^0.17.3",
+    "@chatie/grpc": "^0.17.4",
     "@reduxjs/toolkit": "^1.4.0",
     "redux": "^4.0.5",
     "redux-observable": "^1.2.0",

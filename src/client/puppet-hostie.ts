@@ -95,6 +95,7 @@ import {
   DirtyPayloadRequest,
   ContactCorporationRemarkRequest,
   ContactDescriptionRequest,
+  ContactPhoneRequest,
 }                                   from '@chatie/grpc'
 
 import { Subscription } from 'rxjs'
@@ -591,10 +592,16 @@ export class PuppetHostie extends Puppet {
     )(request)
   }
 
-  public async contactPhone (contactId: string): Promise<string[]>
-  public async contactPhone (contactId: string, phoneList: string[]): Promise<void>
-  public async contactPhone (contactId: string, phoneList?: string[]): Promise<string[] | void> {
-    throw new Error(`Method not implemented. contactId: ${contactId}, phoneList: ${phoneList}`)
+  public async contactPhone (contactId: string, phoneList: string[]): Promise<void> {
+    log.verbose('PuppetHostie', 'contactPhone(%s, %s)', contactId, phoneList)
+
+    const request = new ContactPhoneRequest()
+    request.setContactId(contactId)
+    request.setPhoneListList(phoneList)
+
+    await util.promisify(
+      this.grpcClient!.contactPhone.bind(this.grpcClient)
+    )(request)
   }
 
   public async contactCorporationRemark (contactId: string, corporationRemark: string | null) {
@@ -716,6 +723,7 @@ export class PuppetHostie extends Puppet {
       gender    : response.getGender() as number,
       id        : response.getId(),
       name      : response.getName(),
+      phone     : response.getPhoneList(),
       province  : response.getProvince(),
       signature : response.getSignature(),
       star      : response.getStar(),
