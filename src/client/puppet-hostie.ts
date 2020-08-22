@@ -93,6 +93,8 @@ import {
 
   EventType,
   DirtyPayloadRequest,
+  ContactCorporationRemarkRequest,
+  ContactDescriptionRequest,
 }                                   from '@chatie/grpc'
 
 import { Subscription } from 'rxjs'
@@ -593,6 +595,40 @@ export class PuppetHostie extends Puppet {
   public async contactPhone (contactId: string, phoneList: string[]): Promise<void>
   public async contactPhone (contactId: string, phoneList?: string[]): Promise<string[] | void> {
     throw new Error(`Method not implemented. contactId: ${contactId}, phoneList: ${phoneList}`)
+  }
+
+  public async contactCorporationRemark (contactId: string, corporationRemark: string | null) {
+    log.verbose('PuppetHostie', 'contactCorporationRemark(%s, %s)', contactId, corporationRemark)
+
+    const corporationRemarkWrapper = new StringValue()
+    if (corporationRemark) {
+      corporationRemarkWrapper.setValue(corporationRemark)
+    }
+
+    const request = new ContactCorporationRemarkRequest()
+    request.setContactId(contactId)
+    request.setCorporationRemark(corporationRemarkWrapper)
+
+    await util.promisify(
+      this.grpcClient!.contactCorporationRemark.bind(this.grpcClient)
+    )(request)
+  }
+
+  public async contactDescription (contactId: string, description: string | null) {
+    log.verbose('PuppetHostie', 'contactDescription(%s, %s)', contactId, description)
+
+    const descriptionWrapper = new StringValue()
+    if (description) {
+      descriptionWrapper.setValue(description)
+    }
+
+    const request = new ContactDescriptionRequest()
+    request.setContactId(contactId)
+    request.setDescription(descriptionWrapper)
+
+    await util.promisify(
+      this.grpcClient!.contactDescription.bind(this.grpcClient)
+    )(request)
   }
 
   public async contactList (): Promise<string[]> {
