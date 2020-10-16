@@ -1,4 +1,5 @@
 import grpc             from 'grpc'
+import { PassThrough }  from 'stream'
 
 import {
   IPuppetServer,
@@ -57,6 +58,9 @@ import {
   ContactPhoneResponse,
   ContactDescriptionResponse,
   ContactCorporationRemarkResponse,
+  MessageFileStreamResponse,
+  MessageImageStreamResponse,
+  MessageSendFileStreamRequest,
 }                                   from '@chatie/grpc'
 
 import {
@@ -555,6 +559,30 @@ export function puppetImplementation (
       }
     },
 
+    messageFileStream: async (call) => {
+      log.verbose('PuppetServiceImpl', 'messageFileStream()')
+
+      try {
+        const id = call.request.getId()
+
+        const fileBox = await puppet.messageFile(id)
+
+        const stream = await fileBox.toStream()
+
+        const response = new MessageFileStreamResponse()
+        stream.on('data', data => {
+          response.setData(data)
+          call.write(response)
+        }).on('end', () => {
+          call.end()
+        })
+      } catch (e) {
+        // FIXME: anyway to send error to client?
+        log.error('PuppetServiceImpl', 'grpcError() messageFileStream() rejection: %s', e && e.message)
+        call.end()
+      }
+    },
+
     messageImage: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageImage()')
 
@@ -571,6 +599,30 @@ export function puppetImplementation (
 
       } catch (e) {
         return grpcError('messageImage', e, callback)
+      }
+    },
+
+    messageImageStream: async (call) => {
+      log.verbose('PuppetServiceImpl', 'messageImageStream()')
+
+      try {
+        const id = call.request.getId()
+        const type = call.request.getType()
+
+        const fileBox = await puppet.messageImage(id, type as number as ImageType)
+
+        const stream = await fileBox.toStream()
+        const response = new MessageImageStreamResponse()
+        stream.on('data', data => {
+          response.setData(data)
+          call.write(response)
+        }).on('end', () => {
+          call.end()
+        })
+      } catch (e) {
+        // FIXME: anyway to send error to client?
+        log.error('PuppetServiceImpl', 'grpcError() messageImageStream() rejection: %s', e && e.message)
+        call.end()
       }
     },
 
@@ -673,6 +725,49 @@ export function puppetImplementation (
         const jsonText = call.request.getFilebox()
 
         const fileBox = FileBox.fromJSON(jsonText)
+
+        const messageId = await puppet.messageSendFile(conversationId, fileBox)
+
+        const response = new MessageSendFileResponse()
+
+        if (messageId) {
+          const idWrapper = new StringValue()
+          idWrapper.setValue(messageId)
+          response.setId(idWrapper)
+        }
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageSendFile', e, callback)
+      }
+    },
+
+    messageSendFileStream: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageSendFile()')
+
+      try {
+        let conversationId: string | undefined
+        let fileName: string | undefined
+        const outputStream = new PassThrough()
+
+        call.on('data', (request: MessageSendFileStreamRequest) => {
+          if (!conversationId) {
+            conversationId = request.getConversationId()
+          }
+          if (!fileName) {
+            fileName = request.getName()
+          }
+          outputStream.write(request.getData())
+        }).on('end', () => {
+          outputStream.end()
+        })
+
+        if (!conversationId || !fileName) {
+          throw new Error('No conversationId or fileName, can not send message file.')
+        }
+
+        const fileBox = FileBox.fromStream(outputStream, fileName)
 
         const messageId = await puppet.messageSendFile(conversationId, fileBox)
 

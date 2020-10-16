@@ -3,6 +3,7 @@ import util from 'util'
 import grpc from 'grpc'
 import https from 'https'
 import http from 'http'
+import { PassThrough } from 'stream'
 
 import {
   ContactPayload,
@@ -56,10 +57,8 @@ import {
   MessageContactRequest,
   MessageSendMiniProgramRequest,
   MessageRecallRequest,
-  MessageFileRequest,
   MessagePayloadRequest,
   MessageSendTextRequest,
-  MessageSendFileRequest,
   MessageSendContactRequest,
   MessageSendUrlRequest,
   MessageUrlRequest,
@@ -86,7 +85,6 @@ import {
   TagContactRemoveRequest,
   TagContactDeleteRequest,
   TagContactListRequest,
-  MessageImageRequest,
 
   StringValue,
   DingRequest,
@@ -96,6 +94,11 @@ import {
   ContactCorporationRemarkRequest,
   ContactDescriptionRequest,
   ContactPhoneRequest,
+  MessageFileStreamRequest,
+  MessageFileStreamResponse,
+  MessageImageStreamRequest,
+  MessageSendFileStreamRequest,
+  MessageSendFileStreamResponse,
 }                                   from '@chatie/grpc'
 
 import { Subscription } from 'rxjs'
@@ -832,16 +835,24 @@ export class PuppetHostie extends Puppet {
       ImageType[imageType],
     )
 
-    const request = new MessageImageRequest()
+    const request = new MessageImageStreamRequest()
     request.setId(messageId)
     request.setType(imageType)
 
-    const response = await util.promisify(
-      this.grpcClient!.messageImage.bind(this.grpcClient)
-    )(request)
+    if (!this.grpcClient) {
+      throw new Error('Can not get image from message since no grpc client.')
+    }
+    const stream = this.grpcClient.messageFileStream(request)
+    const outputStream = new PassThrough()
 
-    const jsonText = response.getFilebox()
-    return FileBox.fromJSON(jsonText)
+    const name = ''
+    stream.on('data', response => {
+      outputStream.write(response.getData())
+    }).on('end', () => {
+      outputStream.end()
+    })
+
+    return FileBox.fromStream(outputStream, name)
   }
 
   public async messageContact (
@@ -899,15 +910,22 @@ export class PuppetHostie extends Puppet {
   public async messageFile (id: string): Promise<FileBox> {
     log.verbose('PuppetHostie', 'messageFile(%s)', id)
 
-    const request = new MessageFileRequest()
+    const request = new MessageFileStreamRequest()
     request.setId(id)
 
-    const response = await util.promisify(
-      this.grpcClient!.messageFile.bind(this.grpcClient)
-    )(request)
+    if (!this.grpcClient) {
+      throw new Error('Can not get file from message since no grpc client.')
+    }
+    const stream = this.grpcClient.messageFileStream(request)
+    const outputStream = new PassThrough()
+    const name = ''
 
-    const jsonText = response.getFilebox()
-    return FileBox.fromJSON(jsonText)
+    stream.on('data', (response: MessageFileStreamResponse) => {
+      // TODO: give file name here
+      outputStream.write(response.getData())
+    }).on('end', () => outputStream.end())
+
+    return FileBox.fromStream(outputStream, name)
   }
 
   public async messageRawPayload (id: string): Promise<MessagePayload> {
@@ -972,13 +990,32 @@ export class PuppetHostie extends Puppet {
   ): Promise<void | string> {
     log.verbose('PuppetHostie', 'messageSend(%s, %s)', conversationId, file)
 
-    const request = new MessageSendFileRequest()
+    const request = new MessageSendFileStreamRequest()
     request.setConversationId(conversationId)
-    request.setFilebox(JSON.stringify(file))
+    request.setName(file.name)
 
-    const response = await util.promisify(
-      this.grpcClient!.messageSendFile.bind(this.grpcClient)
-    )(request)
+    const fileStream = await file.toStream()
+
+    const response = await new Promise<MessageSendFileStreamResponse>((resolve, reject) => {
+      if (!this.grpcClient) {
+        reject(new Error('Can not send message file since no grpc client.'))
+        return
+      }
+      const stream = this.grpcClient.messageSendFileStream((err, response) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(response)
+        }
+      })
+
+      fileStream.on('data', data => {
+        request.setData(data)
+        stream.write(request)
+      }).on('end', () => {
+        stream.end()
+      })
+    })
 
     const messageIdWrapper = response.getId()
 
