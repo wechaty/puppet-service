@@ -99,6 +99,7 @@ import {
   MessageImageStreamRequest,
   MessageSendFileStreamRequest,
   MessageSendFileStreamResponse,
+  MessageImageStreamResponse,
 }                                   from '@chatie/grpc'
 
 import { Subscription } from 'rxjs'
@@ -845,13 +846,20 @@ export class PuppetHostie extends Puppet {
     const stream = this.grpcClient.messageFileStream(request)
     const outputStream = new PassThrough()
 
-    const name = ''
-    stream.on('data', response => {
+    let name: string | undefined
+    stream.on('data', (response: MessageImageStreamResponse) => {
+      if (!name) {
+        name = response.getName()
+      }
       outputStream.write(response.getData())
     }).on('end', () => {
       outputStream.end()
     })
 
+    if (!name) {
+      log.warn('PuppetHostie', 'messageImage() got image filebox without name, using default name')
+      name = 'no-name-image'
+    }
     return FileBox.fromStream(outputStream, name)
   }
 
@@ -918,13 +926,19 @@ export class PuppetHostie extends Puppet {
     }
     const stream = this.grpcClient.messageFileStream(request)
     const outputStream = new PassThrough()
-    const name = ''
+    let name: string | undefined
 
     stream.on('data', (response: MessageFileStreamResponse) => {
-      // TODO: give file name here
+      if (!name) {
+        name = response.getName()
+      }
       outputStream.write(response.getData())
     }).on('end', () => outputStream.end())
 
+    if (!name) {
+      log.warn('PuppetHostie', 'messageFile() got message filebox without name, using default name')
+      name = 'no-name-file'
+    }
     return FileBox.fromStream(outputStream, name)
   }
 
