@@ -570,6 +570,7 @@ export function puppetImplementation (
         const stream = await fileBox.toStream()
 
         const response = new MessageFileStreamResponse()
+        response.setName(fileBox.name)
         stream.on('data', data => {
           response.setData(data)
           call.write(response)
@@ -613,6 +614,7 @@ export function puppetImplementation (
 
         const stream = await fileBox.toStream()
         const response = new MessageImageStreamResponse()
+        response.setName(fileBox.name)
         stream.on('data', data => {
           response.setData(data)
           call.write(response)
