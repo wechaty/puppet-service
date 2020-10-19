@@ -77,7 +77,7 @@ import {
   PayloadType,
 }                                   from 'wechaty-puppet'
 
-import { FILE_BOX_NAME_METADATA_KEY, log } from '../config'
+import { CONVERSATION_ID_METADATA_KEY, FILE_BOX_NAME_METADATA_KEY, log } from '../config'
 
 import { grpcError }            from './grpc-error'
 import { EventStreamManager }   from './event-stream-manager'
@@ -752,25 +752,23 @@ export function puppetImplementation (
       log.verbose('PuppetServiceImpl', 'messageSendFile()')
 
       try {
-        let conversationId: string | undefined
-        let fileName: string | undefined
         const outputStream = new PassThrough()
 
+        const metaData = call.metadata
+        const conversationIdValues = metaData.get(CONVERSATION_ID_METADATA_KEY)
+        const fileNameValues = metaData.get(FILE_BOX_NAME_METADATA_KEY)
+        const conversationId = conversationIdValues && conversationIdValues[0].toString()
+        const fileName = fileNameValues && fileNameValues[0].toString()
+
+        if (!conversationId || !fileName) {
+          throw new Error(`No ${CONVERSATION_ID_METADATA_KEY} or ${FILE_BOX_NAME_METADATA_KEY} in the metadata, can not send message file.`)
+        }
+
         call.on('data', (request: MessageSendFileStreamRequest) => {
-          if (!conversationId) {
-            conversationId = request.getConversationId()
-          }
-          if (!fileName) {
-            fileName = request.getName()
-          }
           outputStream.write(request.getData())
         }).on('end', () => {
           outputStream.end()
         })
-
-        if (!conversationId || !fileName) {
-          throw new Error('No conversationId or fileName, can not send message file.')
-        }
 
         const fileBox = FileBox.fromStream(outputStream, fileName)
 

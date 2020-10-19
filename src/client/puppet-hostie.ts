@@ -111,6 +111,7 @@ import {
   WECHATY_PUPPET_HOSTIE_ENDPOINT,
   GRPC_LIMITATION,
   FILE_BOX_NAME_METADATA_KEY,
+  CONVERSATION_ID_METADATA_KEY,
 }                                   from '../config'
 
 import {
@@ -1008,8 +1009,9 @@ export class PuppetHostie extends Puppet {
     log.verbose('PuppetHostie', 'messageSend(%s, %s)', conversationId, file)
 
     const request = new MessageSendFileStreamRequest()
-    request.setConversationId(conversationId)
-    request.setName(file.name)
+    const metaData = new grpc.Metadata()
+    metaData.set(FILE_BOX_NAME_METADATA_KEY, file.name)
+    metaData.set(CONVERSATION_ID_METADATA_KEY, conversationId)
 
     const fileStream = await file.toStream()
 
@@ -1018,7 +1020,7 @@ export class PuppetHostie extends Puppet {
         reject(new Error('Can not send message file since no grpc client.'))
         return
       }
-      const stream = this.grpcClient.messageSendFileStream((err, response) => {
+      const stream = this.grpcClient.messageSendFileStream(metaData, (err, response) => {
         if (err) {
           reject(err)
         } else {
