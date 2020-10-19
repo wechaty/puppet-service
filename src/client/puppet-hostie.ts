@@ -110,6 +110,7 @@ import {
   WECHATY_PUPPET_HOSTIE_TOKEN,
   WECHATY_PUPPET_HOSTIE_ENDPOINT,
   GRPC_LIMITATION,
+  FILE_BOX_NAME_METADATA_KEY,
 }                                   from '../config'
 
 import {
@@ -926,20 +927,22 @@ export class PuppetHostie extends Puppet {
     }
     const stream = this.grpcClient.messageFileStream(request)
     const outputStream = new PassThrough()
-    let name: string | undefined
+
+    const fileName = await new Promise<string>((resolve, reject) => {
+      stream.once('metadata', (metaData: grpc.Metadata) => {
+        const nameValues = metaData.get(FILE_BOX_NAME_METADATA_KEY)
+        if (!nameValues || nameValues.length === 0) {
+          reject(new Error('No fileName in the stream meta data, can not get the file from message.'))
+        }
+        resolve(nameValues[0].toString())
+      })
+    })
 
     stream.on('data', (response: MessageFileStreamResponse) => {
-      if (!name) {
-        name = response.getName()
-      }
       outputStream.write(response.getData())
     }).on('end', () => outputStream.end())
 
-    if (!name) {
-      log.warn('PuppetHostie', 'messageFile() got message filebox without name, using default name')
-      name = 'no-name-file'
-    }
-    return FileBox.fromStream(outputStream, name)
+    return FileBox.fromStream(outputStream, fileName)
   }
 
   public async messageRawPayload (id: string): Promise<MessagePayload> {

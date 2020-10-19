@@ -77,7 +77,7 @@ import {
   PayloadType,
 }                                   from 'wechaty-puppet'
 
-import { log } from '../config'
+import { FILE_BOX_NAME_METADATA_KEY, log } from '../config'
 
 import { grpcError }            from './grpc-error'
 import { EventStreamManager }   from './event-stream-manager'
@@ -567,10 +567,13 @@ export function puppetImplementation (
 
         const fileBox = await puppet.messageFile(id)
 
+        const metaData = new grpc.Metadata()
+        metaData.set(FILE_BOX_NAME_METADATA_KEY, fileBox.name)
+        call.sendMetadata(metaData)
+
         const stream = await fileBox.toStream()
 
         const response = new MessageFileStreamResponse()
-        response.setName(fileBox.name)
         stream.on('data', data => {
           response.setData(data)
           call.write(response)
