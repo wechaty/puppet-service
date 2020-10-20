@@ -1551,24 +1551,17 @@ export class PuppetHostie extends Puppet {
     const outputStream = new PassThrough()
 
     const fileName = await new Promise<string>((resolve, reject) => {
-      const timeoutTimer = setTimeout(() => {
-        reject(new Error('TIMEOUT: try to get file name timeout.'))
-      }, GET_FILE_NAME_FOR_FILE_BOX_TIMEOUT)
       stream.once('metadata', (metaData: grpc.Metadata) => {
-        clearTimeout(timeoutTimer)
         const nameValues = metaData.get(FILE_BOX_NAME_METADATA_KEY)
         if (!nameValues || nameValues.length === 0) {
           reject(new Error('No fileName in the stream metadata, can not get the file from stream.'))
         }
         resolve(nameValues[0].toString())
       }).once('error', (error) => {
-        clearTimeout(timeoutTimer)
         reject(error)
       }).once('end', () => {
-        clearTimeout(timeoutTimer)
         reject(new Error('Failed to get file name: unexpected stream end.'))
       }).once('close', () => {
-        clearTimeout(timeoutTimer)
         reject(new Error('Failed to get file name: unexpected stream close.'))
       })
     })
