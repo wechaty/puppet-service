@@ -95,11 +95,9 @@ import {
   ContactDescriptionRequest,
   ContactPhoneRequest,
   MessageFileStreamRequest,
-  MessageFileStreamResponse,
   MessageImageStreamRequest,
-  MessageSendFileStreamRequest,
   MessageSendFileStreamResponse,
-  MessageImageStreamResponse,
+  FileBoxChunk,
 }                                   from '@chatie/grpc'
 
 import { Subscription } from 'rxjs'
@@ -112,6 +110,7 @@ import {
   GRPC_LIMITATION,
   FILE_BOX_NAME_METADATA_KEY,
   CONVERSATION_ID_METADATA_KEY,
+  GET_FILE_NAME_FOR_FILE_BOX_TIMEOUT,
 }                                   from '../config'
 
 import {
@@ -846,23 +845,8 @@ export class PuppetHostie extends Puppet {
       throw new Error('Can not get image from message since no grpc client.')
     }
     const stream = this.grpcClient.messageFileStream(request)
-    const outputStream = new PassThrough()
 
-    let name: string | undefined
-    stream.on('data', (response: MessageImageStreamResponse) => {
-      if (!name) {
-        name = response.getName()
-      }
-      outputStream.write(response.getData())
-    }).on('end', () => {
-      outputStream.end()
-    })
-
-    if (!name) {
-      log.warn('PuppetHostie', 'messageImage() got image filebox without name, using default name')
-      name = 'no-name-image'
-    }
-    return FileBox.fromStream(outputStream, name)
+    return this.getFileBoxFromStream('messageImage', stream)
   }
 
   public async messageContact (
@@ -927,23 +911,7 @@ export class PuppetHostie extends Puppet {
       throw new Error('Can not get file from message since no grpc client.')
     }
     const stream = this.grpcClient.messageFileStream(request)
-    const outputStream = new PassThrough()
-
-    const fileName = await new Promise<string>((resolve, reject) => {
-      stream.once('metadata', (metaData: grpc.Metadata) => {
-        const nameValues = metaData.get(FILE_BOX_NAME_METADATA_KEY)
-        if (!nameValues || nameValues.length === 0) {
-          reject(new Error('No fileName in the stream meta data, can not get the file from message.'))
-        }
-        resolve(nameValues[0].toString())
-      })
-    })
-
-    stream.on('data', (response: MessageFileStreamResponse) => {
-      outputStream.write(response.getData())
-    }).on('end', () => outputStream.end())
-
-    return FileBox.fromStream(outputStream, fileName)
+    return this.getFileBoxFromStream('messageFile', stream)
   }
 
   public async messageRawPayload (id: string): Promise<MessagePayload> {
@@ -1008,7 +976,7 @@ export class PuppetHostie extends Puppet {
   ): Promise<void | string> {
     log.verbose('PuppetHostie', 'messageSend(%s, %s)', conversationId, file)
 
-    const request = new MessageSendFileStreamRequest()
+    const fileBoxChunk = new FileBoxChunk()
     const metaData = new grpc.Metadata()
     metaData.set(FILE_BOX_NAME_METADATA_KEY, file.name)
     metaData.set(CONVERSATION_ID_METADATA_KEY, conversationId)
@@ -1028,11 +996,13 @@ export class PuppetHostie extends Puppet {
         }
       })
 
-      fileStream.on('data', data => {
-        request.setData(data)
-        stream.write(request)
+      fileStream.on('data', chunk => {
+        fileBoxChunk.setChunk(chunk)
+        stream.write(fileBoxChunk)
       }).on('end', () => {
         stream.end()
+      }).on('error', e => {
+        reject(e)
       })
     })
 
@@ -1575,6 +1545,47 @@ export class PuppetHostie extends Puppet {
     )(request)
 
     return response.getIdsList()
+  }
+
+  private async getFileBoxFromStream<T> (methodName: string, stream: grpc.ClientReadableStream<T>) {
+    const outputStream = new PassThrough()
+
+    const fileName = await new Promise<string>((resolve, reject) => {
+      const timeoutTimer = setTimeout(() => {
+        reject(new Error('TIMEOUT: try to get file name timeout.'))
+      }, GET_FILE_NAME_FOR_FILE_BOX_TIMEOUT)
+      stream.once('metadata', (metaData: grpc.Metadata) => {
+        clearTimeout(timeoutTimer)
+        const nameValues = metaData.get(FILE_BOX_NAME_METADATA_KEY)
+        if (!nameValues || nameValues.length === 0) {
+          reject(new Error('No fileName in the stream metadata, can not get the file from stream.'))
+        }
+        resolve(nameValues[0].toString())
+      }).once('error', (error) => {
+        clearTimeout(timeoutTimer)
+        reject(error)
+      }).once('end', () => {
+        clearTimeout(timeoutTimer)
+        reject(new Error('Failed to get file name: unexpected stream end.'))
+      }).once('close', () => {
+        clearTimeout(timeoutTimer)
+        reject(new Error('Failed to get file name: unexpected stream close.'))
+      })
+    })
+    log.verbose('PuppetHostie', `${methodName}() got file name for fileBox: ${fileName}`)
+
+    stream
+      .on('data', (chunk: FileBoxChunk) => {
+        outputStream.write(chunk.getChunk())
+      })
+      .on('end', () => {
+        outputStream.end()
+      })
+      .on('error', (error) => {
+        throw error
+      })
+
+    return FileBox.fromStream(outputStream, fileName)
   }
 
 }
