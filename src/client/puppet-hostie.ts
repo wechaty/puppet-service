@@ -110,7 +110,6 @@ import {
   GRPC_LIMITATION,
   FILE_BOX_NAME_METADATA_KEY,
   CONVERSATION_ID_METADATA_KEY,
-  GET_FILE_NAME_FOR_FILE_BOX_TIMEOUT,
 }                                   from '../config'
 
 import {
@@ -844,7 +843,7 @@ export class PuppetHostie extends Puppet {
     if (!this.grpcClient) {
       throw new Error('Can not get image from message since no grpc client.')
     }
-    const stream = this.grpcClient.messageFileStream(request)
+    const stream = this.grpcClient.messageImageStream(request)
 
     return this.getFileBoxFromStream('messageImage', stream)
   }
