@@ -58,6 +58,7 @@ import {
   ContactDescriptionResponse,
   ContactCorporationRemarkResponse,
   MessageSendFileStreamResponse,
+  MessageImageStreamResponse,
 }                                   from '@chatie/grpc'
 
 import {
@@ -79,6 +80,7 @@ import { grpcError } from './grpc-error'
 import { EventStreamManager }   from './event-stream-manager'
 import { toMessageSendFileStreamRequestArgs } from '../stream/message-send-file-stream-request'
 import { fileBoxToChunkStream } from '../stream/file-box-helper'
+import { packFileBoxChunk } from '../stream/file-box-packer'
 
 /**
  * Implements the SayHello RPC method.
@@ -603,7 +605,8 @@ export function puppetImplementation (
         const fileBox = await puppet.messageImage(id, type as number as ImageType)
 
         const stream = await fileBoxToChunkStream(fileBox)
-        stream.pipe(call)
+        const response = new MessageImageStreamResponse()
+        packFileBoxChunk(stream, response).pipe(call)
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageImageStream() rejection: %s', e && e.message)
         call.emit('error', e)
