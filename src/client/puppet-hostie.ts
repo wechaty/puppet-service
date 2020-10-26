@@ -1415,6 +1415,7 @@ export class PuppetHostie extends Puppet {
 
     const payload: FriendshipPayload = {
       contactId : response.getContactId(),
+      hello: response.getHello(),
       id,
       scene     : response.getScene() as number,
       stranger  : response.getStranger(),
