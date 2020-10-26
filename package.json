@@ -60,11 +60,12 @@
     "wechaty-puppet": "^0.32.2"
   },
   "dependencies": {
-    "@chatie/grpc": "^0.18.2",
+    "@chatie/grpc": "^0.18.8",
     "@reduxjs/toolkit": "^1.4.0",
     "redux": "^4.0.5",
     "redux-observable": "^1.2.0",
     "rxjs": "^6.6.2",
+    "stronger-typed-streams": "^0.1.2",
     "ws": "^7.3.1"
   },
   "publishConfig": {

@@ -3,7 +3,6 @@ import util from 'util'
 import grpc from 'grpc'
 import https from 'https'
 import http from 'http'
-import { PassThrough } from 'stream'
 
 import {
   ContactPayload,
@@ -97,7 +96,6 @@ import {
   MessageFileStreamRequest,
   MessageImageStreamRequest,
   MessageSendFileStreamResponse,
-  FileBoxChunk,
 }                                   from '@chatie/grpc'
 
 import { Subscription } from 'rxjs'
@@ -108,8 +106,6 @@ import {
   WECHATY_PUPPET_HOSTIE_TOKEN,
   WECHATY_PUPPET_HOSTIE_ENDPOINT,
   GRPC_LIMITATION,
-  FILE_BOX_NAME_METADATA_KEY,
-  CONVERSATION_ID_METADATA_KEY,
 }                                   from '../config'
 
 import {
@@ -120,6 +116,8 @@ import {
   recover$,
 }             from './recover$'
 import { EventDirtyPayload } from 'wechaty-puppet/dist/src/schemas/event'
+import { toMessageSendFileStreamRequest } from '../stream/message-send-file-stream-request'
+import { chunkStreamToFileBox } from '../stream/file-box-helper'
 
 const MAX_HOSTIE_IP_DISCOVERY_RETRIES = 10
 const MAX_GRPC_CONNECTION_RETRIES = 5
@@ -845,7 +843,7 @@ export class PuppetHostie extends Puppet {
     }
     const stream = this.grpcClient.messageImageStream(request)
 
-    return this.getFileBoxFromStream('messageImage', stream)
+    return chunkStreamToFileBox(stream)
   }
 
   public async messageContact (
@@ -910,7 +908,7 @@ export class PuppetHostie extends Puppet {
       throw new Error('Can not get file from message since no grpc client.')
     }
     const stream = this.grpcClient.messageFileStream(request)
-    return this.getFileBoxFromStream('messageFile', stream)
+    return chunkStreamToFileBox(stream)
   }
 
   public async messageRawPayload (id: string): Promise<MessagePayload> {
@@ -975,34 +973,21 @@ export class PuppetHostie extends Puppet {
   ): Promise<void | string> {
     log.verbose('PuppetHostie', 'messageSend(%s, %s)', conversationId, file)
 
-    const fileBoxChunk = new FileBoxChunk()
-    const metaData = new grpc.Metadata()
-    metaData.set(FILE_BOX_NAME_METADATA_KEY, file.name)
-    metaData.set(CONVERSATION_ID_METADATA_KEY, conversationId)
-
-    const fileStream = await file.toStream()
+    const request = await toMessageSendFileStreamRequest(conversationId, file)
 
     const response = await new Promise<MessageSendFileStreamResponse>((resolve, reject) => {
       if (!this.grpcClient) {
         reject(new Error('Can not send message file since no grpc client.'))
         return
       }
-      const stream = this.grpcClient.messageSendFileStream(metaData, (err, response) => {
+      const stream = this.grpcClient.messageSendFileStream((err, response) => {
         if (err) {
           reject(err)
         } else {
           resolve(response)
         }
       })
-
-      fileStream.on('data', chunk => {
-        fileBoxChunk.setChunk(chunk)
-        stream.write(fileBoxChunk)
-      }).on('end', () => {
-        stream.end()
-      }).on('error', e => {
-        reject(e)
-      })
+      request.pipe(stream)
     })
 
     const messageIdWrapper = response.getId()
@@ -1544,40 +1529,6 @@ export class PuppetHostie extends Puppet {
     )(request)
 
     return response.getIdsList()
-  }
-
-  private async getFileBoxFromStream<T> (methodName: string, stream: grpc.ClientReadableStream<T>) {
-    const outputStream = new PassThrough()
-
-    const fileName = await new Promise<string>((resolve, reject) => {
-      stream.once('metadata', (metaData: grpc.Metadata) => {
-        const nameValues = metaData.get(FILE_BOX_NAME_METADATA_KEY)
-        if (!nameValues || nameValues.length === 0) {
-          reject(new Error('No fileName in the stream metadata, can not get the file from stream.'))
-        }
-        resolve(nameValues[0].toString())
-      }).once('error', (error) => {
-        reject(error)
-      }).once('end', () => {
-        reject(new Error('Failed to get file name: unexpected stream end.'))
-      }).once('close', () => {
-        reject(new Error('Failed to get file name: unexpected stream close.'))
-      })
-    })
-    log.verbose('PuppetHostie', `${methodName}() got file name for fileBox: ${fileName}`)
-
-    stream
-      .on('data', (chunk: FileBoxChunk) => {
-        outputStream.write(chunk.getChunk())
-      })
-      .on('end', () => {
-        outputStream.end()
-      })
-      .on('error', (error) => {
-        throw error
-      })
-
-    return FileBox.fromStream(outputStream, fileName)
   }
 
 }

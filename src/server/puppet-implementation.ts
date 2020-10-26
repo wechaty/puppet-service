@@ -1,5 +1,4 @@
 import grpc             from 'grpc'
-import { PassThrough }  from 'stream'
 
 import {
   IPuppetServer,
@@ -59,7 +58,6 @@ import {
   ContactDescriptionResponse,
   ContactCorporationRemarkResponse,
   MessageSendFileStreamResponse,
-  FileBoxChunk,
 }                                   from '@chatie/grpc'
 
 import {
@@ -76,13 +74,11 @@ import {
   PayloadType,
 }                                   from 'wechaty-puppet'
 
-import { CONVERSATION_ID_METADATA_KEY, FILE_BOX_NAME_METADATA_KEY, log } from '../config'
-
-import {
-  grpcError,
-  sendFileBoxInStream,
-}                               from './utils'
+import { log } from '../config'
+import { grpcError } from './grpc-error'
 import { EventStreamManager }   from './event-stream-manager'
+import { toMessageSendFileStreamRequestArgs } from '../stream/message-send-file-stream-request'
+import { fileBoxToChunkStream } from '../stream/file-box-helper'
 
 /**
  * Implements the SayHello RPC method.
@@ -569,7 +565,8 @@ export function puppetImplementation (
 
         const fileBox = await puppet.messageFile(id)
 
-        await sendFileBoxInStream(fileBox, call)
+        const stream = await fileBoxToChunkStream(fileBox)
+        stream.pipe(call)
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageFileStream() rejection: %s', e && e.message)
         call.emit('error', e)
@@ -605,7 +602,8 @@ export function puppetImplementation (
 
         const fileBox = await puppet.messageImage(id, type as number as ImageType)
 
-        await sendFileBoxInStream(fileBox, call)
+        const stream = await fileBoxToChunkStream(fileBox)
+        stream.pipe(call)
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageImageStream() rejection: %s', e && e.message)
         call.emit('error', e)
@@ -734,25 +732,9 @@ export function puppetImplementation (
       log.verbose('PuppetServiceImpl', 'messageSendFile()')
 
       try {
-        const outputStream = new PassThrough()
-
-        const metaData = call.metadata
-        const conversationIdValues = metaData.get(CONVERSATION_ID_METADATA_KEY)
-        const fileNameValues = metaData.get(FILE_BOX_NAME_METADATA_KEY)
-        const conversationId = conversationIdValues && conversationIdValues[0].toString()
-        const fileName = fileNameValues && fileNameValues[0].toString()
-
-        if (!conversationId || !fileName) {
-          throw new Error(`No ${CONVERSATION_ID_METADATA_KEY} or ${FILE_BOX_NAME_METADATA_KEY} in the metadata, can not send message file.`)
-        }
-
-        call.on('data', (chunk: FileBoxChunk) => {
-          outputStream.write(chunk.getChunk())
-        }).on('end', () => {
-          outputStream.end()
-        })
-
-        const fileBox = FileBox.fromStream(outputStream, fileName)
+        const requestArgs = await toMessageSendFileStreamRequestArgs(call)
+        const conversationId = requestArgs.conversationId
+        const fileBox = requestArgs.fileBox
 
         const messageId = await puppet.messageSendFile(conversationId, fileBox)
 
