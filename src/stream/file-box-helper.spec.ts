@@ -88,7 +88,7 @@ test('fileBoxToChunkStream()', async t => {
     if (!chunk.hasData()) {
       throw new Error('no data')
     }
-    data += chunk.getData_asB64()
+    data += chunk.getData()
   })
 
   await new Promise(resolve => stream.on('end', resolve))
