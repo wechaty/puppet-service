@@ -59,6 +59,7 @@ import {
   ContactCorporationRemarkResponse,
   MessageSendFileStreamResponse,
   MessageImageStreamResponse,
+  MessageFileStreamResponse,
 }                                   from '@chatie/grpc'
 
 import {
@@ -568,7 +569,8 @@ export function puppetImplementation (
         const fileBox = await puppet.messageFile(id)
 
         const stream = await fileBoxToChunkStream(fileBox)
-        stream.pipe(call)
+        const response = new MessageFileStreamResponse()
+        packFileBoxChunk(stream, response).pipe(call)
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageFileStream() rejection: %s', e && e.message)
         call.emit('error', e)

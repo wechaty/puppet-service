@@ -843,8 +843,8 @@ export class PuppetHostie extends Puppet {
       throw new Error('Can not get image from message since no grpc client.')
     }
     const stream = this.grpcClient.messageImageStream(request)
-    const fileBoxStream = unpackFileBoxChunk(stream)
-    return chunkStreamToFileBox(fileBoxStream)
+    const fileBoxChunkStream = unpackFileBoxChunk(stream)
+    return chunkStreamToFileBox(fileBoxChunkStream)
   }
 
   public async messageContact (
@@ -909,7 +909,8 @@ export class PuppetHostie extends Puppet {
       throw new Error('Can not get file from message since no grpc client.')
     }
     const stream = this.grpcClient.messageFileStream(request)
-    return chunkStreamToFileBox(stream)
+    const fileBoxChunkStream = unpackFileBoxChunk(stream)
+    return chunkStreamToFileBox(fileBoxChunkStream)
   }
 
   public async messageRawPayload (id: string): Promise<MessagePayload> {

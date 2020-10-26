@@ -1,5 +1,4 @@
 import {
-  FileBoxChunk,
   MessageSendFileStreamRequest,
 }                                     from '@chatie/grpc'
 import { FileBox } from 'wechaty-puppet'
@@ -7,32 +6,18 @@ import { PassThrough } from 'stream'
 
 import {
   Readable,
-  TypedTransform,
 }                   from './typed-stream'
 import { firstData } from './first-data'
 import {
   chunkStreamToFileBox,
   fileBoxToChunkStream,
 }                   from './file-box-helper'
+import { packFileBoxChunk, unpackFileBoxChunk } from './file-box-packer'
 
 interface MessageSendFileStreamRequestArgs {
   conversationId: string,
   fileBox: FileBox,
 }
-
-const decoder = () => new TypedTransform<
-  MessageSendFileStreamRequest,
-  FileBoxChunk
->({
-  objectMode: true,
-  transform: (chunk: MessageSendFileStreamRequest, _: any, callback: any) => {
-    if (!chunk.hasFileBoxChunk()) {
-      throw new Error('no file box chunk')
-    }
-    const fileBoxChunk = chunk.getFileBoxChunk()
-    callback(null, fileBoxChunk)
-  },
-})
 
 async function toMessageSendFileStreamRequestArgs (
   stream: Readable<MessageSendFileStreamRequest>
@@ -43,26 +28,13 @@ async function toMessageSendFileStreamRequestArgs (
   }
   const conversationId = chunk.getConversationId()
 
-  const fileBoxChunkStream = stream.pipe(decoder())
-  const fileBox = await chunkStreamToFileBox(fileBoxChunkStream)
+  const fileBox = await chunkStreamToFileBox(unpackFileBoxChunk(stream))
 
   return {
     conversationId,
     fileBox,
   }
 }
-
-const encoder = () => new TypedTransform<
-  FileBoxChunk,
-  MessageSendFileStreamRequest
->({
-  objectMode: true,
-  transform: (chunk: FileBoxChunk, _: any, callback: any) => {
-    const req = new MessageSendFileStreamRequest()
-    req.setFileBoxChunk(chunk)
-    callback(null, req)
-  },
-})
 
 async function toMessageSendFileStreamRequest (
   conversationId: string,
@@ -75,8 +47,9 @@ async function toMessageSendFileStreamRequest (
   stream.write(req)
 
   const fileBoxChunkStream = await fileBoxToChunkStream(fileBox)
-  fileBoxChunkStream
-    .pipe(encoder())
+  req.clearConversationId()
+
+  packFileBoxChunk(fileBoxChunkStream, req)
     .pipe(stream)
 
   return stream

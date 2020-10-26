@@ -25,16 +25,21 @@ function packFileBoxChunk<T extends { setFileBoxChunk: (chunk: FileBoxChunk) => 
   return outStream
 }
 
-function unpackFileBoxChunk<T extends { getFileBoxChunk: () => FileBoxChunk}> (
+function unpackFileBoxChunk<T extends { getFileBoxChunk: () => FileBoxChunk | undefined }> (
   stream: Readable<T>,
 ): Readable<FileBoxChunk> {
   return stream.pipe(decoder())
 }
 
-const decoder = <T extends { getFileBoxChunk: () => FileBoxChunk }>() => new TypedTransform<T, FileBoxChunk>({
+const decoder = <T extends { getFileBoxChunk: () => FileBoxChunk | undefined }>() => new TypedTransform<T, FileBoxChunk>({
   objectMode: true,
-  transform: (chunk: T, _: any, callback: (error: Error | null, data: FileBoxChunk) => void) => {
-    callback(null, chunk.getFileBoxChunk())
+  transform: (chunk: T, _: any, callback: (error: Error | null, data?: FileBoxChunk) => void) => {
+    const fileBoxChunk = chunk.getFileBoxChunk()
+    if (!fileBoxChunk) {
+      callback(new Error('No FileBoxChunk'))
+    } else {
+      callback(null, fileBoxChunk)
+    }
   },
 })
 
