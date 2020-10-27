@@ -8,10 +8,11 @@ import {
 }                   from './typed-stream'
 
 const encoder = <T extends { setFileBoxChunk: (chunk: FileBoxChunk) => void }>(
-  message: T,
+  Data: { new(): T },
 ) => new TypedTransform<FileBoxChunk, T>({
   objectMode: true,
   transform: (chunk: FileBoxChunk, _: any, callback: (error: Error | null, data: T) => void) => {
+    const message = new Data()
     message.setFileBoxChunk(chunk)
     callback(null, message)
   },
@@ -19,10 +20,9 @@ const encoder = <T extends { setFileBoxChunk: (chunk: FileBoxChunk) => void }>(
 
 function packFileBoxChunk<T extends { setFileBoxChunk: (chunk: FileBoxChunk) => void }> (
   stream: Readable<FileBoxChunk>,
-  predefinedMessage: T,
+  DataConstructor: { new(): T },
 ): Readable<T> {
-  const outStream = stream.pipe(encoder(predefinedMessage))
-  return outStream
+  return stream.pipe(encoder(DataConstructor))
 }
 
 function unpackFileBoxChunk<T extends { getFileBoxChunk: () => FileBoxChunk | undefined }> (

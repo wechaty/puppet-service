@@ -42,14 +42,13 @@ async function toMessageSendFileStreamRequest (
 ): Promise<Readable<MessageSendFileStreamRequest>> {
   const stream = new PassThrough({ objectMode: true })
 
-  const req = new MessageSendFileStreamRequest()
-  req.setConversationId(conversationId)
-  stream.write(req)
+  const first = new MessageSendFileStreamRequest()
+  first.setConversationId(conversationId)
+  stream.write(first)
 
   const fileBoxChunkStream = await fileBoxToChunkStream(fileBox)
-  req.clearConversationId()
 
-  packFileBoxChunk(fileBoxChunkStream, req)
+  packFileBoxChunk(fileBoxChunkStream, MessageSendFileStreamRequest)
     .pipe(stream)
 
   return stream

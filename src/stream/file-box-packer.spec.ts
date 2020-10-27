@@ -29,8 +29,7 @@ test('packFileBoxChunk()', async t => {
 
   const chunkStream = await fileBoxToChunkStream(fileBox)
 
-  const message = new MessageFileStreamResponse()
-  const packedStream = packFileBoxChunk(chunkStream, message)
+  const packedStream = packFileBoxChunk(chunkStream, MessageFileStreamResponse)
 
   let name = ''
   let buffer = ''
@@ -88,8 +87,7 @@ test('packFileBoxChunk() <-> unpackFileBoxChunk()', async t => {
   )
 
   const stream = await fileBoxToChunkStream(fileBox)
-  const response = new MessageFileStreamResponse()
-  const packedStream = packFileBoxChunk(stream, response)
+  const packedStream = packFileBoxChunk(stream, MessageFileStreamResponse)
 
   const unpackedStream = unpackFileBoxChunk(packedStream)
   const restoredBox = await chunkStreamToFileBox(unpackedStream)
