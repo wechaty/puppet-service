@@ -79,6 +79,7 @@ import { grpcError } from './grpc-error'
 import { EventStreamManager }   from './event-stream-manager'
 import { toMessageSendFileStreamRequestArgs } from '../stream/message-send-file-stream-request'
 import { fileBoxToChunkStream } from '../stream/file-box-helper'
+import { serializeFileBox } from './serialize-file-box'
 
 /**
  * Implements the SayHello RPC method.
@@ -548,7 +549,7 @@ export function puppetImplementation (
         const fileBox = await puppet.messageFile(id)
 
         const response = new MessageFileResponse()
-        response.setFilebox(JSON.stringify(fileBox))
+        response.setFilebox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
@@ -584,7 +585,7 @@ export function puppetImplementation (
         const fileBox = await puppet.messageImage(id, type as number as ImageType)
 
         const response = new MessageImageResponse()
-        response.setFilebox(JSON.stringify(fileBox))
+        response.setFilebox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
@@ -910,7 +911,7 @@ export function puppetImplementation (
         const fileBox = await puppet.roomAvatar(roomId)
 
         const response = new RoomAvatarResponse()
-        response.setFilebox(JSON.stringify(fileBox))
+        response.setFilebox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
