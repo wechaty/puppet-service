@@ -58,6 +58,8 @@ import {
   ContactDescriptionResponse,
   ContactCorporationRemarkResponse,
   MessageSendFileStreamResponse,
+  MessageImageStreamResponse,
+  MessageFileStreamResponse,
 }                                   from '@chatie/grpc'
 
 import {
@@ -80,6 +82,7 @@ import { EventStreamManager }   from './event-stream-manager'
 import { toMessageSendFileStreamRequestArgs } from '../stream/message-send-file-stream-request'
 import { fileBoxToChunkStream } from '../stream/file-box-helper'
 import { serializeFileBox } from './serialize-file-box'
+import { packFileBoxChunk } from '../stream/file-box-packer'
 
 /**
  * Implements the SayHello RPC method.
@@ -567,7 +570,7 @@ export function puppetImplementation (
         const fileBox = await puppet.messageFile(id)
 
         const stream = await fileBoxToChunkStream(fileBox)
-        stream.pipe(call)
+        packFileBoxChunk(stream, MessageFileStreamResponse).pipe(call)
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageFileStream() rejection: %s', e && e.message)
         call.emit('error', e)
@@ -604,7 +607,7 @@ export function puppetImplementation (
         const fileBox = await puppet.messageImage(id, type as number as ImageType)
 
         const stream = await fileBoxToChunkStream(fileBox)
-        stream.pipe(call)
+        packFileBoxChunk(stream, MessageImageStreamResponse).pipe(call)
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageImageStream() rejection: %s', e && e.message)
         call.emit('error', e)
@@ -730,7 +733,7 @@ export function puppetImplementation (
     },
 
     messageSendFileStream: async (call, callback) => {
-      log.verbose('PuppetServiceImpl', 'messageSendFile()')
+      log.verbose('PuppetServiceImpl', 'messageSendFileStream()')
 
       try {
         const requestArgs = await toMessageSendFileStreamRequestArgs(call)
@@ -750,7 +753,7 @@ export function puppetImplementation (
         return callback(null, response)
 
       } catch (e) {
-        return grpcError('messageSendFile', e, callback)
+        return grpcError('messageSendFileStream', e, callback)
       }
     },
 
