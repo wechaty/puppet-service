@@ -1,3 +1,5 @@
+#!/usr/bin/env ts-node
+
 import test  from 'tstest'
 
 import { PassThrough } from 'stream'
@@ -93,5 +95,9 @@ test('packFileBoxChunk() <-> unpackFileBoxChunk()', async t => {
   const restoredBox = await chunkStreamToFileBox(unpackedStream)
 
   t.equal(fileBox.name, restoredBox.name, 'should be same name')
-  t.equal(await fileBox.toBase64(), await restoredBox.toBase64(), 'should be same content')
+
+  const EXPECTED_BASE64 = await fileBox.toBase64()
+  const actualBase64 = await restoredBox.toBase64()
+
+  t.equal(EXPECTED_BASE64, actualBase64, 'should be same content')
 })
