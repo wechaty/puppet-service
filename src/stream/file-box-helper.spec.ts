@@ -123,7 +123,7 @@ test('should handle first error catch', async t => {
   }
 })
 
-test.only('should handle middle error in further ops', async t => {
+test('should handle middle error in further ops', async t => {
   t.plan(1)
   const FILE_BOX_DATA = 'test'
   const FILE_BOX_NAME = 'test.dat'
