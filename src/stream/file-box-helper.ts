@@ -27,12 +27,13 @@ async function chunkStreamToFileBox (
   }
   const fileName = chunk.getName()
 
-  // const fileStream = new PassThrough()
+  const fileStream = new PassThrough({ objectMode: true })
   const transformedStream = stream.pipe(decoder())
+  transformedStream.pipe(fileStream)
+  stream.on('error', e => fileStream.emit('error', e))
+  transformedStream.on('error', e => fileStream.emit('error', e))
 
-  stream.on('error', e => transformedStream.emit('error', e))
-
-  const fileBox = FileBox.fromStream(transformedStream, fileName)
+  const fileBox = FileBox.fromStream(fileStream, fileName)
 
   return fileBox
 }
