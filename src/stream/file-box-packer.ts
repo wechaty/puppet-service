@@ -1,15 +1,11 @@
-import {
-  FileBoxChunk,
-}                 from '@chatie/grpc'
+import { FileBoxChunk } from '@chatie/grpc'
+import { Readable } from 'stronger-typed-streams'
 
-import {
-  Readable,
-  Transform,
-}                   from 'stronger-typed-streams'
+import { TypedTransform } from './typed-stream'
 
 const encoder = <T extends { setFileBoxChunk: (chunk: FileBoxChunk) => void }>(
   Data: { new(): T },
-) => new Transform<FileBoxChunk, T>({
+) => new TypedTransform<FileBoxChunk, T>({
   objectMode: true,
   transform: (chunk: FileBoxChunk, _: any, callback: (error: Error | null, data: T) => void) => {
     const message = new Data()
@@ -31,7 +27,7 @@ function unpackFileBoxChunk<T extends { getFileBoxChunk: () => FileBoxChunk | un
   return stream.pipe(decoder())
 }
 
-const decoder = <T extends { getFileBoxChunk: () => FileBoxChunk | undefined }>() => new Transform<T, FileBoxChunk>({
+const decoder = <T extends { getFileBoxChunk: () => FileBoxChunk | undefined }>() => new TypedTransform<T, FileBoxChunk>({
   objectMode: true,
   transform: (chunk: T, _: any, callback: (error: Error | null, data?: FileBoxChunk) => void) => {
     const fileBoxChunk = chunk.getFileBoxChunk()

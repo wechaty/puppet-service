@@ -1,20 +1,12 @@
+import { FileBoxChunk } from '@chatie/grpc'
+import { PassThrough } from 'stream'
+import { Readable } from 'stronger-typed-streams'
 import { FileBox } from 'wechaty-puppet'
-import {
-  PassThrough,
-}                   from 'stream'
-import {
-  Readable,
-  Transform,
-}                   from 'stronger-typed-streams'
 
-import {
-  FileBoxChunk,
-}                 from '@chatie/grpc'
-import {
-  firstData,
-}           from './first-data'
+import { firstData } from './first-data'
+import { TypedTransform } from './typed-stream'
 
-const decoder = () => new Transform<FileBoxChunk, any>({
+const decoder = () => new TypedTransform<FileBoxChunk, any>({
   objectMode: true,
   transform: (chunk: FileBoxChunk, _: any, callback: any) => {
     if (!chunk.hasData()) {
@@ -41,7 +33,7 @@ async function chunkStreamToFileBox (
   return fileBox
 }
 
-const encoder = () => new Transform<any, FileBoxChunk>({
+const encoder = () => new TypedTransform<any, FileBoxChunk>({
   objectMode: true,
   transform: (chunk: any, _: any, callback: any) => {
     const fileBoxChunk = new FileBoxChunk()
