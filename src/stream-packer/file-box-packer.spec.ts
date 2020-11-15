@@ -21,9 +21,9 @@
  */
 import test  from 'tstest'
 
-import { PassThrough } from 'stream'
-
-import { FileBox } from 'wechaty-puppet'
+import { PassThrough }  from 'stream'
+import { Duplex }       from 'stronger-typed-streams'
+import { FileBox }      from 'wechaty-puppet'
 
 import {
   FileBoxChunk,
@@ -103,7 +103,7 @@ test('should handle no name error in catch', async t => {
   const stream = await getFileBoxStreamStub(FILE_BOX_DATA, FILE_BOX_NAME, true)
 
   try {
-    await chunkStreamToFileBox(stream)
+    await unpackFileBox(stream)
   } catch (e) {
     t.equal(e.message, 'no name')
   }
@@ -117,7 +117,7 @@ test('should handle first error catch', async t => {
   const stream = await getFileBoxStreamStub(FILE_BOX_DATA, FILE_BOX_NAME, false, true)
 
   try {
-    await chunkStreamToFileBox(stream)
+    await unpackFileBox(stream)
   } catch (e) {
     t.equal(e.message, 'first exception')
   }
@@ -130,7 +130,7 @@ test('should handle middle error in further ops', async t => {
 
   const stream = await getFileBoxStreamStub(FILE_BOX_DATA, FILE_BOX_NAME, false, false, true)
 
-  const fileBox = await chunkStreamToFileBox(stream)
+  const fileBox = await unpackFileBox(stream)
   try {
     await fileBox.toBuffer()
   } catch (e) {
@@ -150,7 +150,7 @@ const getFileBoxStreamStub = async (
     name,
   )
 
-  const stream = new PassThrough({ objectMode: true })
+  const stream: Duplex<FileBoxChunk, FileBoxChunk> = new PassThrough({ objectMode: true })
 
   if (firstException) {
     stream.pause()

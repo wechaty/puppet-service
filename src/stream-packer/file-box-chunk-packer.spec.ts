@@ -10,7 +10,7 @@ import {
   FileBoxChunk,
   MessageFileStreamResponse,
   MessageSendFileStreamRequest,
-}                 from '@chatie/grpc'
+}                                 from '@chatie/grpc'
 
 import {
   unpackFileBox,
@@ -109,7 +109,7 @@ test('packFileBoxChunk(): should not throw if no read on the stream', async t =>
   const stream = await getTestChunkStream({})
   let outStream
   try {
-    outStream = packFileBoxChunk(stream, MessageFileStreamResponse)
+    outStream = packFileBoxChunk(MessageFileStreamResponse)(stream)
   } catch (e) {
     t.assert(e.message)
     return
@@ -123,7 +123,7 @@ test('packFileBoxChunk(): should emit error in the output stream', async t => {
   t.plan(1)
   const errorMessage = 'test emit error'
   const stream = await getTestChunkStream({ errorMessage })
-  const outStream = packFileBoxChunk(stream, MessageFileStreamResponse)
+  const outStream = packFileBoxChunk(MessageFileStreamResponse)(stream)
 
   outStream.on('error', e => {
     t.equal(e.message, errorMessage)
@@ -153,7 +153,7 @@ test('unpackFileBoxChunk(): should emit error in the output stream', async t => 
   const errorMessage = 'test emit error'
   const stream = await getTestPackedStream({ errorMessage })
 
-  const outStream = packFileBoxChunk(stream, MessageFileStreamResponse)
+  const outStream = packFileBoxChunk(MessageFileStreamResponse)(stream)
 
   outStream.on('error', e => {
     t.equal(e.message, errorMessage)
@@ -175,7 +175,7 @@ const getTestChunkStream = async (options: {
     FILE_BOX_NAME,
   )
 
-  const chunkStream = await fileBoxToChunkStream(fileBox)
+  const chunkStream = await packFileBox(fileBox)
   setImmediate(() => {
     chunkStream.emit('error', new Error(errorMessage))
   })
@@ -196,7 +196,7 @@ const getTestPackedStream = async (options: {
     FILE_BOX_NAME,
   )
 
-  const chunkStream = await fileBoxToChunkStream(fileBox)
+  const chunkStream = await packFileBox(fileBox)
   const packedStream = new PassThrough({ objectMode: true })
   chunkStream.on('data', d => {
     const packedChunk = new MessageFileStreamResponse()
