@@ -7,31 +7,36 @@ import {
   Transform,
 }                   from 'stronger-typed-streams'
 
-const encoder = <T extends { setFileBoxChunk: (chunk: FileBoxChunk) => void }>(
-  Data: { new(): T },
+/**
+ * Any Protocol Buffer message that include a FileBoxChunk
+ */
+type PbFileBoxChunk = {
+  getFileBoxChunk: () => FileBoxChunk | undefined
+  setFileBoxChunk: (chunk: FileBoxChunk) => void
+}
+
+/**
+ * Wrap FileBoxChunk
+ */
+const encoder = <T extends PbFileBoxChunk>(
+  PbMessage: { new(): T },
 ) => new Transform<FileBoxChunk, T>({
   objectMode: true,
   transform: (chunk: FileBoxChunk, _: any, callback: (error: Error | null, data: T) => void) => {
-    const message = new Data()
+    const message = new PbMessage()
     message.setFileBoxChunk(chunk)
     callback(null, message)
   },
 })
 
-function packFileBoxChunk<T extends { setFileBoxChunk: (chunk: FileBoxChunk) => void }> (
-  stream: Readable<FileBoxChunk>,
+const packFileBoxChunk = <T extends PbFileBoxChunk> (
   DataConstructor: { new(): T },
-): Readable<T> {
-  return stream.pipe(encoder(DataConstructor))
-}
+) => (stream: Readable<FileBoxChunk>): Readable<T> => stream.pipe(encoder(DataConstructor))
 
-function unpackFileBoxChunk<T extends { getFileBoxChunk: () => FileBoxChunk | undefined }> (
-  stream: Readable<T>,
-): Readable<FileBoxChunk> {
-  return stream.pipe(decoder())
-}
-
-const decoder = <T extends { getFileBoxChunk: () => FileBoxChunk | undefined }>() => new Transform<T, FileBoxChunk>({
+/**
+ * Unwrap FileBoxChunk
+ */
+const decoder = <T extends PbFileBoxChunk>() => new Transform<T, FileBoxChunk>({
   objectMode: true,
   transform: (chunk: T, _: any, callback: (error: Error | null, data?: FileBoxChunk) => void) => {
     const fileBoxChunk = chunk.getFileBoxChunk()
@@ -42,6 +47,12 @@ const decoder = <T extends { getFileBoxChunk: () => FileBoxChunk | undefined }>(
     }
   },
 })
+
+function unpackFileBoxChunk<T extends PbFileBoxChunk> (
+  stream: Readable<T>,
+): Readable<FileBoxChunk> {
+  return stream.pipe(decoder())
+}
 
 export {
   packFileBoxChunk,

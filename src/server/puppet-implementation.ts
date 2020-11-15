@@ -76,13 +76,17 @@ import {
   PayloadType,
 }                                   from 'wechaty-puppet'
 
+import {
+  packFileBox,
+  packFileBoxChunk,
+  toMessageSendFileStreamRequestArgs,
+}                                         from '../stream-packer/mod'
+
 import { log } from '../config'
-import { grpcError } from './grpc-error'
-import { EventStreamManager }   from './event-stream-manager'
-import { toMessageSendFileStreamRequestArgs } from '../stream/message-send-file-stream-request'
-import { fileBoxToChunkStream } from '../stream/file-box-helper'
-import { serializeFileBox } from './serialize-file-box'
-import { packFileBoxChunk } from '../stream/file-box-packer'
+
+import { grpcError }          from './grpc-error'
+import { EventStreamManager } from './event-stream-manager'
+import { serializeFileBox }   from './serialize-file-box'
 
 /**
  * Implements the SayHello RPC method.
@@ -543,6 +547,10 @@ export function puppetImplementation (
       }
     },
 
+    /**
+     * @deprecated: should not use this API because it will be changed to
+     *  `messageFileStream` after Dec 31, 2021
+     */
     messageFile: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageFile()')
 
@@ -569,8 +577,10 @@ export function puppetImplementation (
 
         const fileBox = await puppet.messageFile(id)
 
-        const stream = await fileBoxToChunkStream(fileBox)
-        packFileBoxChunk(stream, MessageFileStreamResponse).pipe(call)
+        const fileBoxChunk = await packFileBox(fileBox)
+        const response = packFileBoxChunk(MessageFileStreamResponse)(fileBoxChunk)
+        response.pipe(call)
+
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageFileStream() rejection: %s', e && e.message)
         call.emit('error', e)
@@ -578,6 +588,10 @@ export function puppetImplementation (
       }
     },
 
+    /**
+     * @deprecated: should not use this API because it will be changed to
+     *  `messageFileStream` after Dec 31, 2021
+     */
     messageImage: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageImage()')
 
@@ -606,8 +620,10 @@ export function puppetImplementation (
 
         const fileBox = await puppet.messageImage(id, type as number as ImageType)
 
-        const stream = await fileBoxToChunkStream(fileBox)
-        packFileBoxChunk(stream, MessageImageStreamResponse).pipe(call)
+        const fileBoxChunk = await packFileBox(fileBox)
+        const response = packFileBoxChunk(MessageImageStreamResponse)(fileBoxChunk)
+        response.pipe(call)
+
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageImageStream() rejection: %s', e && e.message)
         call.emit('error', e)

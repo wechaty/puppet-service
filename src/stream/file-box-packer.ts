@@ -11,8 +11,8 @@ import {
   FileBoxChunk,
 }                 from '@chatie/grpc'
 import {
-  firstData,
-}           from './first-data'
+  nextData,
+}           from './next-data'
 
 const decoder = () => new Transform<FileBoxChunk, any>({
   objectMode: true,
@@ -26,10 +26,10 @@ const decoder = () => new Transform<FileBoxChunk, any>({
   },
 })
 
-async function chunkStreamToFileBox (
+async function unpackFileBox (
   stream: Readable<FileBoxChunk>,
 ): Promise<FileBox> {
-  const chunk = await firstData(stream)
+  const chunk = await nextData(stream)
   if (!chunk.hasName()) {
     throw new Error('no name')
   }
@@ -50,7 +50,7 @@ const encoder = () => new Transform<any, FileBoxChunk>({
   },
 })
 
-async function fileBoxToChunkStream (
+async function packFileBox (
   fileBox: FileBox,
 ): Promise<Readable<FileBoxChunk>> {
   const stream = new PassThrough({ objectMode: true })
@@ -69,6 +69,6 @@ async function fileBoxToChunkStream (
 }
 
 export {
-  chunkStreamToFileBox,
-  fileBoxToChunkStream,
+  unpackFileBox,
+  packFileBox,
 }
