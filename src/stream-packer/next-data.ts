@@ -19,6 +19,7 @@ async function nextData<T> (
 
       resolve(chunk)
     })
+    stream.once('error', reject)
 
   })
   stream.resume()

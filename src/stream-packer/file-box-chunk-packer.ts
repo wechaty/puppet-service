@@ -1,11 +1,6 @@
-import {
-  FileBoxChunk,
-}                 from '@chatie/grpc'
-
-import {
-  Readable,
-  Transform,
-}                   from 'stronger-typed-streams'
+import { FileBoxChunk } from '@chatie/grpc'
+import { Readable, Transform } from 'stronger-typed-streams'
+import { PassThrough } from 'stream'
 
 /**
  * Any Protocol Buffer message that include a FileBoxChunk
@@ -29,9 +24,20 @@ const encoder = <T extends PbFileBoxChunk>(
   },
 })
 
-const packFileBoxChunk = <T extends PbFileBoxChunk> (
+function packFileBoxChunk<T extends PbFileBoxChunk> (
   DataConstructor: { new(): T },
-) => (stream: Readable<FileBoxChunk>): Readable<T> => stream.pipe(encoder(DataConstructor))
+) {
+  return (stream: Readable<FileBoxChunk>): Readable<T> => {
+    const outStream     = new PassThrough({ objectMode: true })
+    const encodedStream = stream.pipe(encoder(DataConstructor))
+
+    stream.on('error',        e => outStream.emit('error', e))
+    encodedStream.on('error', e => outStream.emit('error', e))
+
+    encodedStream.pipe(outStream)
+    return outStream
+  }
+}
 
 /**
  * Unwrap FileBoxChunk
@@ -51,7 +57,14 @@ const decoder = <T extends PbFileBoxChunk>() => new Transform<T, FileBoxChunk>({
 function unpackFileBoxChunk<T extends PbFileBoxChunk> (
   stream: Readable<T>,
 ): Readable<FileBoxChunk> {
-  return stream.pipe(decoder())
+  const outStream     = new PassThrough({ objectMode: true })
+  const decodedStream = stream.pipe(decoder())
+
+  stream.on('error',        e => outStream.emit('error', e))
+  decodedStream.on('error', e => outStream.emit('error', e))
+
+  decodedStream.pipe(outStream)
+  return outStream
 }
 
 export {

@@ -575,16 +575,16 @@ export function puppetImplementation (
       try {
         const id = call.request.getId()
 
-        const fileBox = await puppet.messageFile(id)
-
+        const fileBox      = await puppet.messageFile(id)
         const fileBoxChunk = await packFileBox(fileBox)
-        const response = packFileBoxChunk(MessageFileStreamResponse)(fileBoxChunk)
+        const response     = packFileBoxChunk(MessageFileStreamResponse)(fileBoxChunk)
+
+        response.on('error', e => call.destroy(e))
         response.pipe(call)
 
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageFileStream() rejection: %s', e && e.message)
-        call.emit('error', e)
-        call.end()
+        call.destroy(e)
       }
     },
 
@@ -618,16 +618,16 @@ export function puppetImplementation (
         const id = call.request.getId()
         const type = call.request.getType()
 
-        const fileBox = await puppet.messageImage(id, type as number as ImageType)
-
+        const fileBox      = await puppet.messageImage(id, type as number as ImageType)
         const fileBoxChunk = await packFileBox(fileBox)
-        const response = packFileBoxChunk(MessageImageStreamResponse)(fileBoxChunk)
+        const response     = packFileBoxChunk(MessageImageStreamResponse)(fileBoxChunk)
+
+        response.on('error', e => call.destroy(e))
         response.pipe(call)
 
       } catch (e) {
         log.error('PuppetServiceImpl', 'grpcError() messageImageStream() rejection: %s', e && e.message)
-        call.emit('error', e)
-        call.end()
+        call.destroy(e)
       }
     },
 
