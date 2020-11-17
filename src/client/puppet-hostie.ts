@@ -114,14 +114,14 @@ import {
 }                 from '../event-type-rev'
 
 import {
-  recover$,
-}             from './recover$'
+  toMessageSendFileStreamRequest,
+  unpackFileBoxFromPb,
+}                                   from '../file-box-stream/mod'
+import { serializeFileBox }         from '../server/serialize-file-box'
 
 import {
-  toMessageSendFileStreamRequest, unpackFileBoxFromPb,
-}                                   from '../file-box-stream/mod'
-
-import { serializeFileBox }   from '../server/serialize-file-box'
+  recover$,
+}             from './recover$'
 
 const MAX_HOSTIE_IP_DISCOVERY_RETRIES = 10
 const MAX_GRPC_CONNECTION_RETRIES = 5
