@@ -118,10 +118,8 @@ import {
 }             from './recover$'
 
 import {
-  toMessageSendFileStreamRequest,
-  unpackFileBox,
-  unpackFileBoxChunk,
-}                                   from '../stream-packer/mod'
+  toMessageSendFileStreamRequest, unpackFileBoxFromPb,
+}                                   from '../file-box-stream/mod'
 
 import { serializeFileBox }   from '../server/serialize-file-box'
 
@@ -847,9 +845,11 @@ export class PuppetHostie extends Puppet {
     if (!this.grpcClient) {
       throw new Error('Can not get image from message since no grpc client.')
     }
-    const stream = this.grpcClient.messageImageStream(request)
-    const fileBoxChunkStream = unpackFileBoxChunk(stream)
-    return unpackFileBox(fileBoxChunkStream)
+    const pbStream = this.grpcClient.messageImageStream(request)
+    const fileBox = await unpackFileBoxFromPb(pbStream)
+    // const fileBoxChunkStream = unpackFileBoxChunk(stream)
+    // return unpackFileBox(fileBoxChunkStream)
+    return fileBox
   }
 
   public async messageContact (
@@ -913,9 +913,11 @@ export class PuppetHostie extends Puppet {
     if (!this.grpcClient) {
       throw new Error('Can not get file from message since no grpc client.')
     }
-    const stream = this.grpcClient.messageFileStream(request)
-    const fileBoxChunkStream = unpackFileBoxChunk(stream)
-    return unpackFileBox(fileBoxChunkStream)
+    const pbStream = this.grpcClient.messageFileStream(request)
+    // const fileBoxChunkStream = unpackFileBoxChunk(pbStream)
+    // return unpackFileBox(fileBoxChunkStream)
+    const fileBox = await unpackFileBoxFromPb(pbStream)
+    return fileBox
   }
 
   public async messageRawPayload (id: string): Promise<MessagePayload> {
