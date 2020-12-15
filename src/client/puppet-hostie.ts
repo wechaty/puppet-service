@@ -1,5 +1,6 @@
 import util from 'util'
 
+import { FileBoxType } from 'file-box'
 import grpc from 'grpc'
 import https from 'https'
 import http from 'http'
@@ -124,7 +125,6 @@ import { serializeFileBox }         from '../server/serialize-file-box'
 import {
   recover$,
 }             from './recover$'
-import { FileBoxType } from 'wechaty-puppet/node_modules/file-box'
 
 const MAX_HOSTIE_IP_DISCOVERY_RETRIES = 10
 const MAX_GRPC_CONNECTION_RETRIES = 5
