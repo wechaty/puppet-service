@@ -2,7 +2,8 @@
 
 ## This module has been renamed to **wechaty-puppet-service**
 
-The ~~wechaty-puppet-hostie~~ module has been renamed to [wechaty-puppet-service](https://github.com/wechaty/wechaty-puppet-service), please use **wechaty-puppet-service** instead.
+The ~~wechaty-puppet-hostie~~ module has been renamed to [wechaty-puppet-service](https://github.com/wechaty/wechaty-puppet-service),
+please use **wechaty-puppet-service** instead.
 
 ## Use **wechaty-puppet-service** instead of ~~wechaty-puppet-hostie~~
 
