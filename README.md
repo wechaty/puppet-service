@@ -1,4 +1,10 @@
-# wechaty-puppet-hostie
+# ~~wechaty-puppet-hostie~~
+
+## This module has been renamed to **wechaty-puppet-service**
+
+The ~~wechaty-puppet-hostie~~ module has been renamed to [wechaty-puppet-service](https://github.com/wechaty/wechaty-puppet-service), please use **wechaty-puppet-service** instead.
+
+## Use **wechaty-puppet-service** instead of ~~wechaty-puppet-hostie~~
 
 [![NPM Version](https://badge.fury.io/js/wechaty-puppet-hostie.svg)](https://www.npmjs.com/package/wechaty-puppet-hostie)
 [![NPM](https://github.com/Chatie/grpc/workflows/NPM/badge.svg)](https://github.com/wechaty/wechaty-puppet-hostie/actions?query=workflow%3ANPM)
