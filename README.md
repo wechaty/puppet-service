@@ -12,7 +12,8 @@ please use **wechaty-puppet-service** instead.
 1. Replace `wechaty-puppet-hostie` by `wechaty-puppet-service`
 1. Replace `WECHATY_PUPPET_HOSTIE_TOKEN` by `WECHATY_PUPPET_SERVICE_TOKEN`
 1. Replace `PuppetHostie` by `PuppetService` (if applicatory)
-1. Replace `WECHATY_PUPPET_HOSTIE_ENDPOINT` by `WECHATY_PUPPET_SERVICE_ENDPOINT` (if applicatory)
+1. Replace `WECHATY_PUPPET_HOSTIE_ENDPOINT` by
+`WECHATY_PUPPET_SERVICE_ENDPOINT` (if applicatory)
 
 If you have any questions, please feel free to ask in our Gitter room: <https://gitter.im/wechaty/wechaty>
 
