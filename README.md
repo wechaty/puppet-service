@@ -50,6 +50,11 @@ WECHATY_PUPPET_HOSTIE_TOKEN=hostie_token node bot.js
 
 ### master
 
+### v0.12.255 (Jan 23, 2021)
+
+The ~~wechaty-puppet-hostie~~ module has been renamed to [wechaty-puppet-service](https://github.com/wechaty/wechaty-puppet-service),
+please use **wechaty-puppet-service** instead.
+
 ### v0.10.4 (Oct 2020)
 
 1. Add 'grpc.default_authority' to gRPC client option.  
