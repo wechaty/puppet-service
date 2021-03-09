@@ -70,6 +70,7 @@ import {
   UrlLinkPayload,
   RoomInvitationPayload,
   ImageType,
+  FriendshipAddOptions,
   FriendshipSceneType,
   EventScanPayload,
   EventReadyPayload,
@@ -435,9 +436,10 @@ export function puppetImplementation (
 
       try {
         const contactId = call.request.getContactId()
-        const hello = call.request.getHello()
+        const optionsText = call.request.getOptions()
+        const options = JSON.parse(optionsText) as FriendshipAddOptions
 
-        await puppet.friendshipAdd(contactId, hello)
+        await puppet.friendshipAdd(contactId, options)
         return callback(null, new FriendshipAddResponse())
 
       } catch (e) {

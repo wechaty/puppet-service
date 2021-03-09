@@ -10,6 +10,7 @@ import {
 
   FileBox,
 
+  FriendshipAddOptions,
   FriendshipPayload,
 
   MessagePayload,
@@ -1449,13 +1450,13 @@ export class PuppetService extends Puppet {
 
   public async friendshipAdd (
     contactId : string,
-    hello     : string,
+    options   : FriendshipAddOptions,
   ): Promise<void> {
-    log.verbose('PuppetService', 'friendshipAdd(%s, %s)', contactId, hello)
+    log.verbose('PuppetService', 'friendshipAdd(%s, %s)', contactId, JSON.stringify(options))
 
     const request = new FriendshipAddRequest()
     request.setContactId(contactId)
-    request.setHello(hello)
+    request.setOptions(JSON.stringify(options))
 
     await util.promisify(
       this.grpcClient!.friendshipAdd.bind(this.grpcClient)
