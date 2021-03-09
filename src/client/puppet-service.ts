@@ -1,9 +1,9 @@
 import util from 'util'
 
+import { FileBoxType } from 'file-box'
 import grpc from 'grpc'
-import WebSocket from 'ws'
-
-// import { DebounceQueue } from 'rx-queue'
+import https from 'https'
+import http from 'http'
 
 import {
   ContactPayload,
@@ -17,17 +17,13 @@ import {
   Puppet,
   PuppetOptions,
 
-  RoomInvitationPayload,
-  RoomMemberPayload,
-  RoomPayload,
-  UrlLinkPayload,
-  MiniProgramPayload,
-  ImageType,
+  EventDirtyPayload,
   EventDongPayload,
-  EventLogoutPayload,
-  EventHeartbeatPayload,
+  EventErrorPayload,
   EventFriendshipPayload,
+  EventHeartbeatPayload,
   EventLoginPayload,
+  EventLogoutPayload,
   EventMessagePayload,
   EventReadyPayload,
   EventRoomInvitePayload,
@@ -35,7 +31,13 @@ import {
   EventRoomLeavePayload,
   EventRoomTopicPayload,
   EventScanPayload,
-  EventErrorPayload,
+  ImageType,
+  MiniProgramPayload,
+  PayloadType,
+  RoomInvitationPayload,
+  RoomMemberPayload,
+  RoomPayload,
+  UrlLinkPayload,
 }                         from 'wechaty-puppet'
 
 import {
@@ -56,10 +58,8 @@ import {
   MessageContactRequest,
   MessageSendMiniProgramRequest,
   MessageRecallRequest,
-  MessageFileRequest,
   MessagePayloadRequest,
   MessageSendTextRequest,
-  MessageSendFileRequest,
   MessageSendContactRequest,
   MessageSendUrlRequest,
   MessageUrlRequest,
@@ -86,19 +86,30 @@ import {
   TagContactRemoveRequest,
   TagContactDeleteRequest,
   TagContactListRequest,
-  MessageImageRequest,
 
   StringValue,
   DingRequest,
 
   EventType,
+  DirtyPayloadRequest,
+  ContactCorporationRemarkRequest,
+  ContactDescriptionRequest,
+  ContactPhoneRequest,
+  MessageFileStreamRequest,
+  MessageImageStreamRequest,
+  MessageSendFileStreamResponse,
+  MessageSendFileStreamRequest,
+  MessageSendFileRequest,
 }                                   from '@chatie/grpc'
+
+import { Subscription } from 'rxjs'
 
 import {
   log,
   VERSION,
-  WECHATY_PUPPET_HOSTIE_TOKEN,
-  WECHATY_PUPPET_HOSTIE_ENDPOINT,
+  WECHATY_PUPPET_SERVICE_TOKEN,
+  WECHATY_PUPPET_SERVICE_ENDPOINT,
+  GRPC_OPTIONS,
 }                                   from '../config'
 
 import {
@@ -106,17 +117,26 @@ import {
 }                 from '../event-type-rev'
 
 import {
+  packConversationIdFileBoxToPb,
+  unpackFileBoxFromPb,
+}                                   from '../file-box-stream/mod'
+import { serializeFileBox }         from '../server/serialize-file-box'
+
+import {
   recover$,
 }             from './recover$'
 
-export class PuppetHostie extends Puppet {
+const MAX_SERVICE_IP_DISCOVERY_RETRIES = 10
+const MAX_GRPC_CONNECTION_RETRIES = 5
+
+export class PuppetService extends Puppet {
 
   public static readonly VERSION = VERSION
 
   private grpcClient?  : PuppetClient
   private eventStream? : grpc.ClientReadableStream<EventResponse>
 
-  // Emit the last heartbeat if there's no more coming after HEATRTBEAT_DEBOUNCE_TIME seconds
+  // Emit the last heartbeat if there's no more coming after HEARTBEAT_DEBOUNCE_TIME seconds
   // private heartbeatDebounceQueue: DebounceQueue
 
   /**
@@ -127,107 +147,106 @@ export class PuppetHostie extends Puppet {
    */
   private cleanCallbackList: (() => void)[]
 
-  // protected recoverSubscription: Subscription
+  protected recoverSubscription?: Subscription
+
+  private reconnectTimer?: NodeJS.Timeout
 
   constructor (
     public options: PuppetOptions = {},
   ) {
     super(options)
-    options.endpoint = options.endpoint || WECHATY_PUPPET_HOSTIE_ENDPOINT
-    options.token    = options.token    || WECHATY_PUPPET_HOSTIE_TOKEN
-
-    if (!options.token) {
-      throw new Error('wechaty-puppet-hostie: token not found. See: <https://github.com/wechaty/wechaty-puppet-hostie#1-wechaty_puppet_hostie_token>')
-    }
+    options.endpoint = options.endpoint || WECHATY_PUPPET_SERVICE_ENDPOINT()
+    options.token    = options.token    || WECHATY_PUPPET_SERVICE_TOKEN()
 
     // this.heartbeatDebounceQueue = new DebounceQueue(HEARTBEAT_DEBOUNCE_TIME * 1000)
 
     this.cleanCallbackList = []
-
-    // this.recoverSubscription =
-    recover$(this).subscribe(
-      x => log.verbose('PuppetHostie', 'constructor() recover$().subscribe() next(%s)', JSON.stringify(x)),
-      e => log.error('PuppetHostie', 'constructor() recover$().subscribe() error(%s)', e),
-      () => log.verbose('PuppetHostie', 'constructor() recover$().subscribe() complete()'),
-    )
   }
 
-  private async discoverHostieIp (
+  private async discoverServiceIp (
     token: string,
-  ): Promise<string> {
-    log.verbose('PuppetHostie', `discoverHostieIp(%s)`, token)
+  ): Promise<{ ip?: string, port?: number }> {
+    log.verbose('PuppetService', 'discoverServiceIp(%s)', token)
 
-    // let DEBUG = true as boolean
-    // if (DEBUG) {
-    //   return '127.0.0.1'
-    // }
-
-    const CHATIE_ENDPOINT = 'wss://api.chatie.io/v0/websocket/token/'
-    const PROTOCOL = 'puppet-hostie|0.0.1'
-
-    const ws = new WebSocket(
-      CHATIE_ENDPOINT + token,
-      PROTOCOL,
-    )
+    const CHATIE_ENDPOINT_LIST = [
+      'https://api.chatie.io',
+      'https://chatieio.herokuapp.com',
+      'http://68.79.16.140',  // from @windmemory,
+    ]
 
     try {
-      return await new Promise<string>((resolve, reject) => {
-
-        ws.once('open', function open () {
-          ws.send(
-            JSON.stringify(
-              {
-                name: 'hostie',
-              },
-            ),
-          )
-        })
-
-        ws.on('message', function incoming (data: string) {
-          const event = JSON.parse(data)
-          if (event.name === 'hostie') {
-            log.verbose('PuppetHostie', `discoverHostieIp() %s`, event.payload)
-            return resolve(event.payload)
-          } else {
-            // console.info('other:', event)
-          }
-        })
-
-        ws.once('error', reject)
-        ws.once('close', reject)
-      })
-    } finally {
-      ws.close()
+      const result = await Promise.race<Promise<{ ip: string, port: number }>>([
+        ...CHATIE_ENDPOINT_LIST.map(endpoint => this.getServiceIp(endpoint, token)),
+        // eslint-disable-next-line promise/param-names
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5 * 1000)),
+      ])
+      return result
+    } catch (e) {
+      log.warn(`discoverServiceIp() failed to get any ip info from all service endpoints.\n${e.stack}`)
+      return {}
     }
   }
 
+  private async getServiceIp (endpoint: string, token: string) {
+    const url = `${endpoint}/v0/hosties/${token}`
+
+    return new Promise<{ port: number, ip: string }>((resolve, reject) => {
+      const httpClient = /^https:\/\//.test(url) ? https : http
+      httpClient.get(url, function (res) {
+        let body = ''
+        res.on('data', function (chunk) {
+          body += chunk
+        })
+        res.on('end', function () {
+          resolve(JSON.parse(body))
+        })
+      }).on('error', function (e) {
+        reject(new Error(`PuppetService discoverServiceIp() endpoint<${url}> rejection: ${e}`))
+      })
+    })
+  }
+
   protected async startGrpcClient (): Promise<void> {
-    log.verbose('PuppetHostie', `startGrpcClient()`)
+    log.verbose('PuppetService', 'startGrpcClient()')
 
     if (this.grpcClient) {
-      throw new Error('puppetClient had already inited')
+      throw new Error('puppetClient had already initialized')
     }
 
     let endpoint = this.options.endpoint
     if (!endpoint) {
-      const ip = await this.discoverHostieIp(this.options.token!)
-      if (!ip || ip === '0.0.0.0') {
-        throw new Error('no endpoint')
+      let serviceIpResult = await this.discoverServiceIp(this.options.token!)
+
+      let retries = MAX_SERVICE_IP_DISCOVERY_RETRIES
+      while (retries > 0 && (!serviceIpResult.ip || serviceIpResult.ip === '0.0.0.0')) {
+        log.warn(`No endpoint when starting grpc client, ${retries--} retry left. Reconnecting in 10 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 10 * 1000))
+        serviceIpResult = await this.discoverServiceIp(this.options.token!)
       }
-      endpoint = ip + ':8788'
+
+      if (!serviceIpResult.ip || serviceIpResult.ip === '0.0.0.0') {
+        return
+      }
+
+      endpoint = serviceIpResult.ip + ':' + serviceIpResult.port
     }
 
+    const clientOptions = {
+      ...GRPC_OPTIONS,
+      'grpc.default_authority': this.options.token,
+    }
     this.grpcClient = new PuppetClient(
       endpoint, // 'localhost:50051',
-      grpc.credentials.createInsecure()
+      grpc.credentials.createInsecure(),
+      clientOptions
     )
   }
 
   protected async stopGrpcClient (): Promise<void> {
-    log.verbose('PuppetHostie', `stopGrpcClient()`)
+    log.verbose('PuppetService', 'stopGrpcClient()')
 
     if (!this.grpcClient) {
-      throw new Error('puppetClient had not inited')
+      throw new Error('puppetClient had not initialized')
     }
 
     this.grpcClient.close()
@@ -235,12 +254,34 @@ export class PuppetHostie extends Puppet {
   }
 
   public async start (): Promise<void> {
-    log.verbose('PuppetHostie', `start()`)
+    await super.start()
+    log.verbose('PuppetService', 'start()')
+
+    if (!this.options.token) {
+      const tokenNotFoundError = 'wechaty-puppet-service: WECHATY_PUPPET_SERVICE_TOKEN not found'
+
+      console.error([
+        '',
+        tokenNotFoundError,
+        '(save token to WECHATY_PUPPET_SERVICE_TOKEN env var or pass it to puppet options is required.).',
+        '',
+        'To learn how to get Wechaty Puppet Service Token,',
+        'please visit <https://wechaty.js.org/docs/puppet-services/>',
+        'to see our Wechaty Puppet Service Providers.',
+        '',
+      ].join('\n'))
+
+      throw new Error(tokenNotFoundError)
+    }
 
     if (this.state.on()) {
-      log.warn('PuppetHostie', 'start() is called on a ON puppet. await ready(on) and return.')
+      log.warn('PuppetService', 'start() is called on a ON puppet. await ready(on) and return.')
       await this.state.ready('on')
       return
+    }
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
     }
 
     this.state.on('pending')
@@ -248,10 +289,12 @@ export class PuppetHostie extends Puppet {
     try {
       await this.startGrpcClient()
       if (!this.grpcClient) {
-        throw new Error('no grpc client')
+        log.warn('PuppetService', 'start() failed to start grpc client, resetting self...')
+        this.emit('reset', { data: 'failed to connect grpc client' })
+        return
       }
 
-      this.startGrpcStream()
+      await this.startGrpcStream()
       // this.startDing()
 
       await util.promisify(
@@ -261,8 +304,19 @@ export class PuppetHostie extends Puppet {
 
       this.state.on(true)
 
+      this.recoverSubscription = recover$(this).subscribe(
+        x => log.verbose('PuppetService', 'constructor() recover$().subscribe() next(%s)', JSON.stringify(x)),
+        e => log.error('PuppetService', 'constructor() recover$().subscribe() error(%s)', e),
+        () => log.verbose('PuppetService', 'constructor() recover$().subscribe() complete()'),
+      )
+
     } catch (e) {
-      log.error('PuppetHostie', 'start() rejection: %s', e && e.message)
+      log.error('PuppetService', 'start() rejection: %s', e && e.message)
+
+      if (this.grpcClient) {
+        this.grpcClient.close()
+        this.grpcClient = undefined
+      }
 
       this.state.off(true)
       throw e
@@ -271,71 +325,95 @@ export class PuppetHostie extends Puppet {
   }
 
   public async stop (): Promise<void> {
-    log.verbose('PuppetHostie', 'stop()')
+    await super.stop()
+    log.verbose('PuppetService', 'stop()')
 
     if (this.state.off()) {
-      log.warn('PuppetHostie', 'stop() is called on a OFF puppet. await ready(off) and return.')
+      log.warn('PuppetService', 'stop() is called on a OFF puppet. await ready(off) and return.')
       await this.state.ready('off')
       return
     }
 
-    try {
-      this.state.off('pending')
+    this.state.off('pending')
 
-      this.cleanCallbackList.forEach(cb => cb())
-      this.cleanCallbackList = []
-
-      if (this.logonoff()) {
-        this.emit('logout', {
-          contactId : this.selfId(),
-          data      : 'PuppetHostie stop()',
-        })
-        this.id = undefined
-      }
-
-      this.stopGrpcStream()
-
-      if (this.grpcClient) {
-        try {
-          await util.promisify(
-            this.grpcClient.stop
-              .bind(this.grpcClient)
-          )(new StopRequest())
-        } catch (e) {
-          log.error('PuppetHostie', 'stop() this.grpcClient.stop() rejection: %s', e.message)
-        }
-      } else {
-        log.warn('PuppetHostie', 'stop() this.grpcClient not exist')
-      }
-
-      await this.stopGrpcClient()
-
-    } catch (e) {
-      log.warn('PuppetHostie', 'stop() rejection: %s', e && e.message)
-      // throw e
-    } finally {
-      this.state.off(true)
+    if (this.recoverSubscription) {
+      this.recoverSubscription.unsubscribe()
+      this.recoverSubscription = undefined
     }
 
+    while (this.cleanCallbackList.length > 0) {
+      const cb = this.cleanCallbackList.pop()
+      try { cb && cb() } catch (e) {
+        log.error('PuppetService', 'stop() cleanCallbackList rejection: %s', e.message)
+      }
+    }
+
+    if (this.grpcClient) {
+      try {
+        this.stopGrpcStream()
+
+        await util.promisify(
+          this.grpcClient.stop
+            .bind(this.grpcClient)
+        )(new StopRequest())
+
+        await this.stopGrpcClient()
+      } catch (e) {
+        log.error('PuppetService', 'stop() stop GRPC rejection: %s', e.message)
+      } finally {
+        this.grpcClient = undefined
+      }
+
+    } else {
+      log.warn('PuppetService', 'stop() this.grpcClient not exist')
+    }
+
+    if (this.logonoff()) {
+      this.emit('logout', {
+        contactId : this.selfId(),
+        data      : 'PuppetService stop()',
+      })
+      this.id = undefined
+    }
+
+    this.state.off(true)
   }
 
-  private startGrpcStream (): void {
-    log.verbose('PuppetHostie', 'startGrpcStream()')
+  private async startGrpcStream (): Promise<void> {
+    log.verbose('PuppetService', 'startGrpcStream()')
 
     if (this.eventStream) {
       throw new Error('event stream exists')
     }
 
-    this.eventStream = this.grpcClient!.event(new EventRequest())
+    let retry = MAX_GRPC_CONNECTION_RETRIES
+    while (!this.eventStream) {
+      try {
+        this.eventStream = this.grpcClient!.event(new EventRequest())
+      } catch (e) {
+        if (retry-- > 0) {
+          log.verbose('PuppetService', `startGrpcStream() connection failed, ${retry} retries left, reconnecting in 2 seconds...`)
+          await new Promise(resolve => setTimeout(resolve, 2 * 1000))
+        } else {
+          log.error('PuppetService', `startGrpcStream() connection failed and max retries has been reached. Error:\n${e.stack}`)
+          break
+        }
+      }
+    }
+
+    if (!this.eventStream) {
+      this.emit('reset', { data: 'startGrpcStream() failed to connect to grpc server' })
+      return
+    }
 
     this.eventStream
       .on('data', this.onGrpcStreamEvent.bind(this))
       .on('end', () => {
-        log.verbose('PuppetHostie', 'startGrpcStream() eventStream.on(end)')
+        log.verbose('PuppetService', 'startGrpcStream() eventStream.on(end)')
       })
       .on('error', e => {
-        // https://github.com/wechaty/wechaty-puppet-hostie/issues/16
-        log.verbose('PuppetHostie', 'startGrpcStream() eventStream.on(error) %s', e)
+        // https://github.com/wechaty/wechaty-puppet-service/issues/16
+        log.verbose('PuppetService', 'startGrpcStream() eventStream.on(error) %s', e)
         const reason = 'startGrpcStream() eventStream.on(error) ' + e
         /**
          * The `Puppet` class have a throttleQueue for receiving the `reset` events
@@ -344,7 +422,7 @@ export class PuppetHostie extends Puppet {
         this.emit('reset', { data: reason })
       })
       .on('cancel', (...args: any[]) => {
-        log.verbose('PuppetHostie', 'startGrpcStream() eventStream.on(cancel), %s', JSON.stringify(args))
+        log.verbose('PuppetService', 'startGrpcStream() eventStream.on(cancel), %s', JSON.stringify(args))
       })
 
   }
@@ -353,7 +431,7 @@ export class PuppetHostie extends Puppet {
     const type    = event.getType()
     const payload = event.getPayload()
 
-    log.verbose('PuppetHostie',
+    log.verbose('PuppetService',
       'onGrpcStreamEvent({type:%s(%s), payload:"%s"})',
       EventTypeRev[type],
       type,
@@ -380,13 +458,18 @@ export class PuppetHostie extends Puppet {
         this.emit('friendship', JSON.parse(payload) as EventFriendshipPayload)
         break
       case EventType.EVENT_TYPE_LOGIN:
-        const loginPayload = JSON.parse(payload) as EventLoginPayload
-        this.id = loginPayload.contactId
-        this.emit('login', loginPayload)
+        {
+          const loginPayload = JSON.parse(payload) as EventLoginPayload
+          this.id = loginPayload.contactId
+          this.emit('login', loginPayload)
+        }
         break
       case EventType.EVENT_TYPE_LOGOUT:
         this.id = undefined
         this.emit('logout', JSON.parse(payload) as EventLogoutPayload)
+        break
+      case EventType.EVENT_TYPE_DIRTY:
+        this.emit('dirty', JSON.parse(payload) as EventDirtyPayload)
         break
       case EventType.EVENT_TYPE_MESSAGE:
         this.emit('message', JSON.parse(payload) as EventMessagePayload)
@@ -410,12 +493,12 @@ export class PuppetHostie extends Puppet {
         this.emit('scan', JSON.parse(payload) as EventScanPayload)
         break
       case EventType.EVENT_TYPE_RESET:
-        log.warn('PuppetHostie', 'onGrpcStreamEvent() got an EventType.EVENT_TYPE_RESET ?')
+        log.warn('PuppetService', 'onGrpcStreamEvent() got an EventType.EVENT_TYPE_RESET ?')
         // the `reset` event should be dealed not send out
         break
 
       case EventType.EVENT_TYPE_UNSPECIFIED:
-        log.error('PuppetHostie', 'onGrpcStreamEvent() got an EventType.EVENT_TYPE_UNSPECIFIED ?')
+        log.error('PuppetService', 'onGrpcStreamEvent() got an EventType.EVENT_TYPE_UNSPECIFIED ?')
         break
 
       default:
@@ -425,10 +508,11 @@ export class PuppetHostie extends Puppet {
   }
 
   private stopGrpcStream (): void {
-    log.verbose('PuppetHostie', 'stopGrpcStream()')
+    log.verbose('PuppetService', 'stopGrpcStream()')
 
     if (!this.eventStream) {
-      throw new Error('no event stream')
+      log.verbose('PuppetService', 'no eventStream when stop, skip destroy.')
+      return
     }
 
     /**
@@ -443,7 +527,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async logout (): Promise<void> {
-    log.verbose('PuppetHostie', 'logout()')
+    log.verbose('PuppetService', 'logout()')
 
     if (!this.id) {
       throw new Error('logout before login?')
@@ -456,33 +540,54 @@ export class PuppetHostie extends Puppet {
       )(new LogoutRequest())
 
     } catch (e) {
-      log.error('PuppetHostie', 'logout() rejection: %s', e && e.message)
+      log.error('PuppetService', 'logout() rejection: %s', e && e.message)
       throw e
-    } finally {
-      const payload = { contactId: this.id } as EventLogoutPayload
-      this.emit('logout', payload) // becore we will throw above by logonoff() when this.user===undefined
-      this.id = undefined
     }
   }
 
   public ding (data: string): void {
-    log.silly('PuppetHostie', 'ding(%s)', data)
+    log.silly('PuppetService', 'ding(%s)', data)
 
     const request = new DingRequest()
     request.setData(data || '')
 
-    this.grpcClient!.ding(
+    if (!this.grpcClient) {
+      log.info('PuppetService', 'ding() Skip ding since grpcClient is not connected.')
+      return
+    }
+
+    this.grpcClient.ding(
       request,
       (error, _response) => {
         if (error) {
-          log.error('PuppetHostie', 'ding() rejection: %s', error)
+          log.error('PuppetService', 'ding() rejection: %s', error)
         }
       }
     )
   }
 
+  async dirtyPayload (type: PayloadType, id: string) {
+    await super.dirtyPayload(type, id)
+    if (!this.grpcClient) {
+      throw new Error('PuppetService dirtyPayload() can not execute due to no grpcClient.')
+    }
+    const request = new DirtyPayloadRequest()
+    request.setId(id)
+    request.setType(type)
+    try {
+      await util.promisify(
+        this.grpcClient.dirtyPayload.bind(this.grpcClient)
+          .bind(this.grpcClient)
+      )(request)
+
+    } catch (e) {
+      log.error('PuppetService', 'dirtyPayload() rejection: %s', e && e.message)
+      throw e
+    }
+  }
+
   public unref (): void {
-    log.verbose('PuppetHostie', 'unref()')
+    log.verbose('PuppetService', 'unref()')
     super.unref()
   }
 
@@ -495,7 +600,7 @@ export class PuppetHostie extends Puppet {
   public contactAlias (contactId: string, alias: string | null): Promise<void>
 
   public async contactAlias (contactId: string, alias?: string | null): Promise<void | string> {
-    log.verbose('PuppetHostie', 'contactAlias(%s, %s)', contactId, alias)
+    log.verbose('PuppetService', 'contactAlias(%s, %s)', contactId, alias)
 
     /**
      * Get alias
@@ -532,8 +637,54 @@ export class PuppetHostie extends Puppet {
     )(request)
   }
 
+  public async contactPhone (contactId: string, phoneList: string[]): Promise<void> {
+    log.verbose('PuppetService', 'contactPhone(%s, %s)', contactId, phoneList)
+
+    const request = new ContactPhoneRequest()
+    request.setContactId(contactId)
+    request.setPhoneListList(phoneList)
+
+    await util.promisify(
+      this.grpcClient!.contactPhone.bind(this.grpcClient)
+    )(request)
+  }
+
+  public async contactCorporationRemark (contactId: string, corporationRemark: string | null) {
+    log.verbose('PuppetService', 'contactCorporationRemark(%s, %s)', contactId, corporationRemark)
+
+    const corporationRemarkWrapper = new StringValue()
+    if (corporationRemark) {
+      corporationRemarkWrapper.setValue(corporationRemark)
+    }
+
+    const request = new ContactCorporationRemarkRequest()
+    request.setContactId(contactId)
+    request.setCorporationRemark(corporationRemarkWrapper)
+
+    await util.promisify(
+      this.grpcClient!.contactCorporationRemark.bind(this.grpcClient)
+    )(request)
+  }
+
+  public async contactDescription (contactId: string, description: string | null) {
+    log.verbose('PuppetService', 'contactDescription(%s, %s)', contactId, description)
+
+    const descriptionWrapper = new StringValue()
+    if (description) {
+      descriptionWrapper.setValue(description)
+    }
+
+    const request = new ContactDescriptionRequest()
+    request.setContactId(contactId)
+    request.setDescription(descriptionWrapper)
+
+    await util.promisify(
+      this.grpcClient!.contactDescription.bind(this.grpcClient)
+    )(request)
+  }
+
   public async contactList (): Promise<string[]> {
-    log.verbose('PuppetHostie', 'contactList()')
+    log.verbose('PuppetService', 'contactList()')
 
     const response = await util.promisify(
       this.grpcClient!.contactList.bind(this.grpcClient)
@@ -558,14 +709,14 @@ export class PuppetHostie extends Puppet {
   public async contactAvatar (contactId: string, file: FileBox) : Promise<void>
 
   public async contactAvatar (contactId: string, fileBox?: FileBox): Promise<void | FileBox> {
-    log.verbose('PuppetHostie', 'contactAvatar(%s)', contactId)
+    log.verbose('PuppetService', 'contactAvatar(%s)', contactId)
 
     /**
      * 1. set
      */
     if (fileBox) {
       const fileboxWrapper = new StringValue()
-      fileboxWrapper.setValue(JSON.stringify(fileBox))
+      fileboxWrapper.setValue(await serializeFileBox(fileBox))
 
       const request = new ContactAvatarRequest()
       request.setId(contactId)
@@ -599,7 +750,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async contactRawPayload (id: string): Promise<ContactPayload> {
-    log.verbose('PuppetHostie', 'contactRawPayload(%s)', id)
+    log.verbose('PuppetService', 'contactRawPayload(%s)', id)
 
     const request = new ContactPayloadRequest()
     request.setId(id)
@@ -609,32 +760,37 @@ export class PuppetHostie extends Puppet {
     )(request)
 
     const payload: ContactPayload = {
-      address   : response.getAddress(),
-      alias     : response.getAlias(),
-      avatar    : response.getAvatar(),
-      city      : response.getCity(),
-      friend    : response.getFriend(),
-      gender    : response.getGender() as number,
-      id        : response.getId(),
-      name      : response.getName(),
-      province  : response.getProvince(),
-      signature : response.getSignature(),
-      star      : response.getStar(),
-      type      : response.getType() as number,
-      weixin    : response.getWeixin(),
+      address     : response.getAddress(),
+      alias       : response.getAlias(),
+      avatar      : response.getAvatar(),
+      city        : response.getCity(),
+      corporation : response.getCorporation(),
+      coworker    : response.getCoworker(),
+      description : response.getDescription(),
+      friend      : response.getFriend(),
+      gender      : response.getGender() as number,
+      id          : response.getId(),
+      name        : response.getName(),
+      phone       : response.getPhoneList(),
+      province    : response.getProvince(),
+      signature   : response.getSignature(),
+      star        : response.getStar(),
+      title       : response.getTitle(),
+      type        : response.getType() as number,
+      weixin      : response.getWeixin(),
     }
 
     return payload
   }
 
   public async contactRawPayloadParser (payload: ContactPayload): Promise<ContactPayload> {
-    // log.silly('PuppetHostie', 'contactRawPayloadParser({id:%s})', payload.id)
+    // log.silly('PuppetService', 'contactRawPayloadParser({id:%s})', payload.id)
     // passthrough
     return payload
   }
 
   public async contactSelfName (name: string): Promise<void> {
-    log.verbose('PuppetHostie', 'contactSelfName(%s)', name)
+    log.verbose('PuppetService', 'contactSelfName(%s)', name)
 
     const request = new ContactSelfNameRequest()
     request.setName(name)
@@ -645,7 +801,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async contactSelfQRCode (): Promise<string> {
-    log.verbose('PuppetHostie', 'contactSelfQRCode()')
+    log.verbose('PuppetService', 'contactSelfQRCode()')
 
     const response = await util.promisify(
       this.grpcClient!.contactSelfQRCode.bind(this.grpcClient)
@@ -655,7 +811,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async contactSelfSignature (signature: string): Promise<void> {
-    log.verbose('PuppetHostie', 'contactSelfSignature(%s)', signature)
+    log.verbose('PuppetService', 'contactSelfSignature(%s)', signature)
 
     const request = new ContactSelfSignatureRequest()
     request.setSignature(signature)
@@ -673,7 +829,7 @@ export class PuppetHostie extends Puppet {
   public async messageMiniProgram (
     messageId: string,
   ): Promise<MiniProgramPayload> {
-    log.verbose('PuppetHostie', 'messageMiniProgram(%s)', messageId)
+    log.verbose('PuppetService', 'messageMiniProgram(%s)', messageId)
 
     const request = new MessageMiniProgramRequest()
     request.setId(messageId)
@@ -692,28 +848,30 @@ export class PuppetHostie extends Puppet {
     messageId: string,
     imageType: ImageType,
   ): Promise<FileBox> {
-    log.verbose('PuppetHostie', 'messageImage(%s, %s[%s])',
+    log.verbose('PuppetService', 'messageImage(%s, %s[%s])',
       messageId,
       imageType,
       ImageType[imageType],
     )
 
-    const request = new MessageImageRequest()
+    const request = new MessageImageStreamRequest()
     request.setId(messageId)
     request.setType(imageType)
 
-    const response = await util.promisify(
-      this.grpcClient!.messageImage.bind(this.grpcClient)
-    )(request)
-
-    const jsonText = response.getFilebox()
-    return FileBox.fromJSON(jsonText)
+    if (!this.grpcClient) {
+      throw new Error('Can not get image from message since no grpc client.')
+    }
+    const pbStream = this.grpcClient.messageImageStream(request)
+    const fileBox = await unpackFileBoxFromPb(pbStream)
+    // const fileBoxChunkStream = unpackFileBoxChunk(stream)
+    // return unpackFileBox(fileBoxChunkStream)
+    return fileBox
   }
 
   public async messageContact (
     messageId: string,
   ): Promise<string> {
-    log.verbose('PuppetHostie', 'messageContact(%s)', messageId)
+    log.verbose('PuppetService', 'messageContact(%s)', messageId)
 
     const request = new MessageContactRequest()
     request.setId(messageId)
@@ -730,7 +888,7 @@ export class PuppetHostie extends Puppet {
     conversationId: string,
     miniProgramPayload: MiniProgramPayload,
   ): Promise<void | string> {
-    log.verbose('PuppetHostie', 'messageSendMiniProgram(%s)', conversationId, JSON.stringify(miniProgramPayload))
+    log.verbose('PuppetService', 'messageSendMiniProgram(%s)', conversationId, JSON.stringify(miniProgramPayload))
 
     const request = new MessageSendMiniProgramRequest()
     request.setConversationId(conversationId)
@@ -750,7 +908,7 @@ export class PuppetHostie extends Puppet {
   public async messageRecall (
     messageId: string,
   ): Promise<boolean> {
-    log.verbose('PuppetHostie', 'messageRecall(%s)', messageId)
+    log.verbose('PuppetService', 'messageRecall(%s)', messageId)
 
     const request = new MessageRecallRequest()
     request.setId(messageId)
@@ -763,21 +921,23 @@ export class PuppetHostie extends Puppet {
   }
 
   public async messageFile (id: string): Promise<FileBox> {
-    log.verbose('PuppetHostie', 'messageFile(%s)', id)
+    log.verbose('PuppetService', 'messageFile(%s)', id)
 
-    const request = new MessageFileRequest()
+    const request = new MessageFileStreamRequest()
     request.setId(id)
 
-    const response = await util.promisify(
-      this.grpcClient!.messageFile.bind(this.grpcClient)
-    )(request)
-
-    const jsonText = response.getFilebox()
-    return FileBox.fromJSON(jsonText)
+    if (!this.grpcClient) {
+      throw new Error('Can not get file from message since no grpc client.')
+    }
+    const pbStream = this.grpcClient.messageFileStream(request)
+    // const fileBoxChunkStream = unpackFileBoxChunk(pbStream)
+    // return unpackFileBox(fileBoxChunkStream)
+    const fileBox = await unpackFileBoxFromPb(pbStream)
+    return fileBox
   }
 
   public async messageRawPayload (id: string): Promise<MessagePayload> {
-    log.verbose('PuppetHostie', 'messageRawPayload(%s)', id)
+    log.verbose('PuppetService', 'messageRawPayload(%s)', id)
 
     const request = new MessagePayloadRequest()
     request.setId(id)
@@ -802,7 +962,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async messageRawPayloadParser (payload: MessagePayload): Promise<MessagePayload> {
-    // log.silly('PuppetHostie', 'messagePayload({id:%s})', payload.id)
+    // log.silly('PuppetService', 'messagePayload({id:%s})', payload.id)
     // passthrough
     return payload
   }
@@ -810,12 +970,16 @@ export class PuppetHostie extends Puppet {
   public async messageSendText (
     conversationId : string,
     text           : string,
+    mentionIdList? : string[],
   ): Promise<void | string> {
-    log.verbose('PuppetHostie', 'messageSend(%s, %s)', conversationId, text)
+    log.verbose('PuppetService', 'messageSend(%s, %s)', conversationId, text)
 
     const request = new MessageSendTextRequest()
     request.setConversationId(conversationId)
     request.setText(text)
+    if (typeof mentionIdList !== 'undefined') {
+      request.setMentonalIdsList(mentionIdList)
+    }
 
     const response = await util.promisify(
       this.grpcClient!.messageSendText.bind(this.grpcClient)
@@ -832,20 +996,19 @@ export class PuppetHostie extends Puppet {
     conversationId : string,
     file           : FileBox,
   ): Promise<void | string> {
-    log.verbose('PuppetHostie', 'messageSend(%s, %s)', conversationId, file)
+    log.verbose('PuppetService', 'messageSend(%s, %s)', conversationId, file)
 
-    const request = new MessageSendFileRequest()
-    request.setConversationId(conversationId)
-    request.setFilebox(JSON.stringify(file))
+    const fileBoxStreamTypes = [
+      FileBoxType.Base64,
+      FileBoxType.Buffer,
+      FileBoxType.File,
+      FileBoxType.Stream,
+    ]
 
-    const response = await util.promisify(
-      this.grpcClient!.messageSendFile.bind(this.grpcClient)
-    )(request)
-
-    const messageIdWrapper = response.getId()
-
-    if (messageIdWrapper) {
-      return messageIdWrapper.getValue()
+    if (fileBoxStreamTypes.includes(file.type())) {
+      return this.messageSendFileStream(conversationId, file)
+    } else {
+      return this.messageSendFileNonStream(conversationId, file)
     }
   }
 
@@ -853,7 +1016,7 @@ export class PuppetHostie extends Puppet {
     conversationId  : string,
     contactId       : string,
   ): Promise<void | string> {
-    log.verbose('PuppetHostie', 'messageSend("%s", %s)', conversationId, contactId)
+    log.verbose('PuppetService', 'messageSend("%s", %s)', conversationId, contactId)
 
     const request = new MessageSendContactRequest()
     request.setConversationId(conversationId)
@@ -874,7 +1037,7 @@ export class PuppetHostie extends Puppet {
     conversationId: string,
     urlLinkPayload: UrlLinkPayload,
   ): Promise<void | string> {
-    log.verbose('PuppetHostie', 'messageSendUrl("%s", %s)', conversationId, JSON.stringify(urlLinkPayload))
+    log.verbose('PuppetService', 'messageSendUrl("%s", %s)', conversationId, JSON.stringify(urlLinkPayload))
 
     const request = new MessageSendUrlRequest()
     request.setConversationId(conversationId)
@@ -892,7 +1055,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async messageUrl (messageId: string): Promise<UrlLinkPayload> {
-    log.verbose('PuppetHostie', 'messageUrl(%s)', messageId)
+    log.verbose('PuppetService', 'messageUrl(%s)', messageId)
 
     const request = new MessageUrlRequest()
     request.setId(messageId)
@@ -915,7 +1078,7 @@ export class PuppetHostie extends Puppet {
   public async roomRawPayload (
     id: string,
   ): Promise<RoomPayload> {
-    log.verbose('PuppetHostie', 'roomRawPayload(%s)', id)
+    log.verbose('PuppetService', 'roomRawPayload(%s)', id)
 
     const request = new RoomPayloadRequest()
     request.setId(id)
@@ -937,13 +1100,13 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomRawPayloadParser (payload: RoomPayload): Promise<RoomPayload> {
-    // log.silly('PuppetHostie', 'roomRawPayloadParser({id:%s})', payload.id)
+    // log.silly('PuppetService', 'roomRawPayloadParser({id:%s})', payload.id)
     // passthrough
     return payload
   }
 
   public async roomList (): Promise<string[]> {
-    log.verbose('PuppetHostie', 'roomList()')
+    log.verbose('PuppetService', 'roomList()')
 
     const response = await util.promisify(
       this.grpcClient!.roomList.bind(this.grpcClient)
@@ -956,7 +1119,7 @@ export class PuppetHostie extends Puppet {
     roomId    : string,
     contactId : string,
   ): Promise<void> {
-    log.verbose('PuppetHostie', 'roomDel(%s, %s)', roomId, contactId)
+    log.verbose('PuppetService', 'roomDel(%s, %s)', roomId, contactId)
 
     const request = new RoomDelRequest()
     request.setId(roomId)
@@ -968,7 +1131,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomAvatar (roomId: string): Promise<FileBox> {
-    log.verbose('PuppetHostie', 'roomAvatar(%s)', roomId)
+    log.verbose('PuppetService', 'roomAvatar(%s)', roomId)
 
     const request = new RoomAvatarRequest()
     request.setId(roomId)
@@ -985,7 +1148,7 @@ export class PuppetHostie extends Puppet {
     roomId    : string,
     contactId : string,
   ): Promise<void> {
-    log.verbose('PuppetHostie', 'roomAdd(%s, %s)', roomId, contactId)
+    log.verbose('PuppetService', 'roomAdd(%s, %s)', roomId, contactId)
 
     const request = new RoomAddRequest()
     request.setId(roomId)
@@ -1003,7 +1166,7 @@ export class PuppetHostie extends Puppet {
     roomId: string,
     topic?: string,
   ): Promise<void | string> {
-    log.verbose('PuppetHostie', 'roomTopic(%s, %s)', roomId, topic)
+    log.verbose('PuppetService', 'roomTopic(%s, %s)', roomId, topic)
 
     /**
      * Get
@@ -1042,7 +1205,7 @@ export class PuppetHostie extends Puppet {
     contactIdList : string[],
     topic         : string,
   ): Promise<string> {
-    log.verbose('PuppetHostie', 'roomCreate(%s, %s)', contactIdList, topic)
+    log.verbose('PuppetService', 'roomCreate(%s, %s)', contactIdList, topic)
 
     const request = new RoomCreateRequest()
     request.setContactIdsList(contactIdList)
@@ -1056,7 +1219,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomQuit (roomId: string): Promise<void> {
-    log.verbose('PuppetHostie', 'roomQuit(%s)', roomId)
+    log.verbose('PuppetService', 'roomQuit(%s)', roomId)
 
     const request = new RoomQuitRequest()
     request.setId(roomId)
@@ -1067,7 +1230,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomQRCode (roomId: string): Promise<string> {
-    log.verbose('PuppetHostie', 'roomQRCode(%s)', roomId)
+    log.verbose('PuppetService', 'roomQRCode(%s)', roomId)
 
     const request = new RoomQRCodeRequest()
     request.setId(roomId)
@@ -1080,7 +1243,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomMemberList (roomId: string) : Promise<string[]> {
-    log.verbose('PuppetHostie', 'roomMemberList(%s)', roomId)
+    log.verbose('PuppetService', 'roomMemberList(%s)', roomId)
 
     const request = new RoomMemberListRequest()
     request.setId(roomId)
@@ -1093,7 +1256,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomMemberRawPayload (roomId: string, contactId: string): Promise<any>  {
-    log.verbose('PuppetHostie', 'roomMemberRawPayload(%s, %s)', roomId, contactId)
+    log.verbose('PuppetService', 'roomMemberRawPayload(%s, %s)', roomId, contactId)
 
     const request = new RoomMemberPayloadRequest()
     request.setId(roomId)
@@ -1115,7 +1278,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomMemberRawPayloadParser (payload: any): Promise<RoomMemberPayload>  {
-    // log.silly('PuppetHostie', 'roomMemberRawPayloadParser({id:%s})', payload.id)
+    // log.silly('PuppetService', 'roomMemberRawPayloadParser({id:%s})', payload.id)
     // passthrough
     return payload
   }
@@ -1124,7 +1287,7 @@ export class PuppetHostie extends Puppet {
   public async roomAnnounce (roomId: string, text: string)  : Promise<void>
 
   public async roomAnnounce (roomId: string, text?: string) : Promise<void | string> {
-    log.verbose('PuppetHostie', 'roomAnnounce(%s%s)',
+    log.verbose('PuppetService', 'roomAnnounce(%s%s)',
       roomId,
       typeof text === 'undefined'
         ? ''
@@ -1169,7 +1332,7 @@ export class PuppetHostie extends Puppet {
   public async roomInvitationAccept (
     roomInvitationId: string,
   ): Promise<void> {
-    log.verbose('PuppetHostie', 'roomInvitationAccept(%s)', roomInvitationId)
+    log.verbose('PuppetService', 'roomInvitationAccept(%s)', roomInvitationId)
 
     const request = new RoomInvitationAcceptRequest()
     request.setId(roomInvitationId)
@@ -1182,7 +1345,7 @@ export class PuppetHostie extends Puppet {
   public async roomInvitationRawPayload (
     id: string,
   ): Promise<RoomInvitationPayload> {
-    log.verbose('PuppetHostie', 'roomInvitationRawPayload(%s)', id)
+    log.verbose('PuppetService', 'roomInvitationRawPayload(%s)', id)
 
     const request = new RoomInvitationPayloadRequest()
     request.setId(id)
@@ -1207,7 +1370,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async roomInvitationRawPayloadParser (payload: RoomInvitationPayload): Promise<RoomInvitationPayload> {
-    // log.silly('PuppetHostie', 'roomInvitationRawPayloadParser({id:%s})', payload.id)
+    // log.silly('PuppetService', 'roomInvitationRawPayloadParser({id:%s})', payload.id)
     // passthrough
     return payload
   }
@@ -1220,7 +1383,7 @@ export class PuppetHostie extends Puppet {
   public async friendshipSearchPhone (
     phone: string,
   ): Promise<string | null> {
-    log.verbose('PuppetHostie', 'friendshipSearchPhone(%s)', phone)
+    log.verbose('PuppetService', 'friendshipSearchPhone(%s)', phone)
 
     const request = new FriendshipSearchPhoneRequest()
     request.setPhone(phone)
@@ -1239,7 +1402,7 @@ export class PuppetHostie extends Puppet {
   public async friendshipSearchWeixin (
     weixin: string,
   ): Promise<string | null> {
-    log.verbose('PuppetHostie', 'friendshipSearchWeixin(%s)', weixin)
+    log.verbose('PuppetService', 'friendshipSearchWeixin(%s)', weixin)
 
     const request = new FriendshipSearchWeixinRequest()
     request.setWeixin(weixin)
@@ -1256,7 +1419,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async friendshipRawPayload (id: string): Promise<FriendshipPayload> {
-    log.verbose('PuppetHostie', 'friendshipRawPayload(%s)', id)
+    log.verbose('PuppetService', 'friendshipRawPayload(%s)', id)
 
     const request = new FriendshipPayloadRequest()
     request.setId(id)
@@ -1266,8 +1429,11 @@ export class PuppetHostie extends Puppet {
     )(request)
 
     const payload: FriendshipPayload = {
-      scene    : response.getScene() as number,
-      stranger : response.getStranger(),
+      contactId : response.getContactId(),
+      hello: response.getHello(),
+      id,
+      scene     : response.getScene() as number,
+      stranger  : response.getStranger(),
       ticket    : response.getTicket(),
       type      : response.getType() as number,
     } as any  // FIXME: Huan(202002)
@@ -1276,7 +1442,7 @@ export class PuppetHostie extends Puppet {
   }
 
   public async friendshipRawPayloadParser (payload: FriendshipPayload) : Promise<FriendshipPayload> {
-    // log.silly('PuppetHostie', 'friendshipRawPayloadParser({id:%s})', payload.id)
+    // log.silly('PuppetService', 'friendshipRawPayloadParser({id:%s})', payload.id)
     // passthrough
     return payload
   }
@@ -1285,7 +1451,7 @@ export class PuppetHostie extends Puppet {
     contactId : string,
     hello     : string,
   ): Promise<void> {
-    log.verbose('PuppetHostie', 'friendshipAdd(%s, %s)', contactId, hello)
+    log.verbose('PuppetService', 'friendshipAdd(%s, %s)', contactId, hello)
 
     const request = new FriendshipAddRequest()
     request.setContactId(contactId)
@@ -1299,7 +1465,7 @@ export class PuppetHostie extends Puppet {
   public async friendshipAccept (
     friendshipId : string,
   ): Promise<void> {
-    log.verbose('PuppetHostie', 'friendshipAccept(%s)', friendshipId)
+    log.verbose('PuppetService', 'friendshipAccept(%s)', friendshipId)
 
     const request = new FriendshipAcceptRequest()
     request.setId(friendshipId)
@@ -1319,7 +1485,7 @@ export class PuppetHostie extends Puppet {
     id: string,
     contactId: string,
   ): Promise<void> {
-    log.verbose('PuppetHostie', 'tagContactAdd(%s, %s)', id, contactId)
+    log.verbose('PuppetService', 'tagContactAdd(%s, %s)', id, contactId)
 
     const request = new TagContactAddRequest()
     request.setId(id)
@@ -1335,7 +1501,7 @@ export class PuppetHostie extends Puppet {
     id: string,
     contactId: string,
   ) : Promise<void> {
-    log.verbose('PuppetHostie', 'tagContactRemove(%s, %s)', id, contactId)
+    log.verbose('PuppetService', 'tagContactRemove(%s, %s)', id, contactId)
 
     const request = new TagContactRemoveRequest()
     request.setId(id)
@@ -1350,7 +1516,7 @@ export class PuppetHostie extends Puppet {
   public async tagContactDelete (
     id: string,
   ) : Promise<void> {
-    log.verbose('PuppetHostie', 'tagContactDelete(%s)', id)
+    log.verbose('PuppetService', 'tagContactDelete(%s)', id)
 
     const request = new TagContactDeleteRequest()
     request.setId(id)
@@ -1364,7 +1530,7 @@ export class PuppetHostie extends Puppet {
   public async tagContactList (
     contactId?: string,
   ) : Promise<string[]> {
-    log.verbose('PuppetHostie', 'tagContactList(%s)', contactId)
+    log.verbose('PuppetService', 'tagContactList(%s)', contactId)
 
     const request = new TagContactListRequest()
 
@@ -1381,6 +1547,53 @@ export class PuppetHostie extends Puppet {
     return response.getIdsList()
   }
 
+  private async messageSendFileStream (
+    conversationId : string,
+    file           : FileBox,
+  ): Promise<void | string> {
+    const request = await packConversationIdFileBoxToPb(MessageSendFileStreamRequest)(conversationId, file)
+
+    const response = await new Promise<MessageSendFileStreamResponse>((resolve, reject) => {
+      if (!this.grpcClient) {
+        reject(new Error('Can not send message file since no grpc client.'))
+        return
+      }
+      const stream = this.grpcClient.messageSendFileStream((err, response) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(response)
+        }
+      })
+      request.pipe(stream)
+    })
+
+    const messageIdWrapper = response.getId()
+
+    if (messageIdWrapper) {
+      return messageIdWrapper.getValue()
+    }
+  }
+
+  private async messageSendFileNonStream (
+    conversationId : string,
+    file           : FileBox,
+  ): Promise<void | string> {
+    const request = new MessageSendFileRequest()
+    request.setConversationId(conversationId)
+    request.setFilebox(JSON.stringify(file))
+
+    const response = await util.promisify(
+      this.grpcClient!.messageSendFile.bind(this.grpcClient)
+    )(request)
+
+    const messageIdWrapper = response.getId()
+
+    if (messageIdWrapper) {
+      return messageIdWrapper.getValue()
+    }
+  }
+
 }
 
-export default PuppetHostie
+export default PuppetService

@@ -10,6 +10,7 @@ import {
   ContactSelfQRCodeResponse,
   ContactSelfSignatureResponse,
   DingResponse,
+  DirtyPayloadResponse,
   FriendshipAcceptResponse,
   FriendshipAddResponse,
   FriendshipPayloadResponse,
@@ -53,6 +54,12 @@ import {
   EventType,
   MessageSendUrlResponse,
   MessageTypeMap,
+  ContactPhoneResponse,
+  ContactDescriptionResponse,
+  ContactCorporationRemarkResponse,
+  MessageSendFileStreamResponse,
+  MessageImageStreamResponse,
+  MessageFileStreamResponse,
 }                                   from '@chatie/grpc'
 
 import {
@@ -65,12 +72,20 @@ import {
   ImageType,
   FriendshipSceneType,
   EventScanPayload,
+  EventReadyPayload,
+  PayloadType,
 }                                   from 'wechaty-puppet'
+
+import {
+  packFileBoxToPb,
+  unpackConversationIdFileBoxArgsFromPb,
+}                                         from '../file-box-stream/mod'
 
 import { log } from '../config'
 
-import { grpcError }            from './grpc-error'
-import { EventStreamManager }   from './event-stream-manager'
+import { grpcError }          from './grpc-error'
+import { EventStreamManager } from './event-stream-manager'
+import { serializeFileBox }   from './serialize-file-box'
 
 /**
  * Implements the SayHello RPC method.
@@ -80,13 +95,29 @@ export function puppetImplementation (
 ): IPuppetServer {
 
   /**
-   * Save scan payload to send it to the puppet-hostie right after connected (if needed)
+   * Save scan payload to send it to the puppet-service right after connected (if needed)
    *
    * TODO: clean the listeners if necessary
    */
   let scanPayload: undefined | EventScanPayload
-  puppet.on('scan', payload => { scanPayload = payload   })
-  puppet.on('login', _      => { scanPayload = undefined })
+  let readyPayload: undefined | EventReadyPayload
+  let readyTimeout: undefined | NodeJS.Timeout
+
+  puppet
+    .on('scan', payload  => { scanPayload = payload    })
+    .on('ready', payload => { readyPayload = payload   })
+    .on('logout', _      => {
+      readyPayload = undefined
+      if (readyTimeout) {
+        clearTimeout(readyTimeout)
+      }
+    })
+    .on('login', _       => {
+      scanPayload = undefined
+      readyTimeout = setTimeout(() => {
+        readyPayload && eventStreamManager.grpcEmit(EventType.EVENT_TYPE_READY, readyPayload)
+      }, 5 * 1000)
+    })
 
   const eventStreamManager = new EventStreamManager(puppet)
 
@@ -174,6 +205,41 @@ export function puppetImplementation (
       }
     },
 
+    contactCorporationRemark: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'contactCorporationRemark()')
+
+      const contactId = call.request.getContactId()
+      let corporationRemark: string | null = null
+      try {
+        const corporationRemarkWrapper = call.request.getCorporationRemark()
+        if (corporationRemarkWrapper) {
+          corporationRemark = corporationRemarkWrapper.getValue()
+        }
+        await puppet.contactCorporationRemark(contactId, corporationRemark)
+        return callback(null, new ContactCorporationRemarkResponse())
+      } catch (e) {
+        return grpcError('contactCorporationRemark', e, callback)
+      }
+    },
+
+    contactDescription: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'contactDescription()')
+
+      const contactId = call.request.getContactId()
+      let description: string | null = null
+
+      try {
+        const descriptionWrapper = call.request.getDescription()
+        if (descriptionWrapper) {
+          description = descriptionWrapper.getValue()
+        }
+        await puppet.contactDescription(contactId, description)
+        return callback(null, new ContactDescriptionResponse())
+      } catch (e) {
+        return grpcError('contactDescription', e, callback)
+      }
+    },
+
     contactList: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'contactList()')
 
@@ -212,10 +278,29 @@ export function puppetImplementation (
         response.setStar(payload.star || false)
         response.setType(payload.type)
         response.setWeixin(payload.weixin || '')
+        response.setPhoneList(payload.phone)
+        response.setCoworker(payload.coworker || false)
+        response.setCorporation(payload.corporation || '')
+        response.setTitle(payload.title || '')
+        response.setDescription(payload.description || '')
 
         return callback(null, response)
       } catch (e) {
         return grpcError('contactPayload', e, callback)
+      }
+    },
+
+    contactPhone: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'contactPhone()')
+
+      try {
+        const contactId = call.request.getContactId()
+        const phoneList = call.request.getPhoneListList()
+
+        await puppet.contactPhone(contactId, phoneList)
+        return callback(null, new ContactPhoneResponse())
+      } catch (e) {
+        return grpcError('contactPhone', e, callback)
       }
     },
 
@@ -276,6 +361,20 @@ export function puppetImplementation (
 
       } catch (e) {
         return grpcError('ding', e, callback)
+      }
+    },
+
+    dirtyPayload: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'dirtyPayload()')
+
+      try {
+        const id = call.request.getId()
+        const type: PayloadType = call.request.getType()
+
+        await puppet.dirtyPayload(type, id)
+        return callback(null, new DirtyPayloadResponse())
+      } catch (e) {
+        return grpcError('dirtyPayload', e, callback)
       }
     },
 
@@ -356,7 +455,7 @@ export function puppetImplementation (
 
         const response = new FriendshipPayloadResponse()
 
-        response.setContactId(payload.id)
+        response.setContactId(payload.contactId)
         response.setHello(payload.hello || '')
         response.setId(payload.id)
         response.setScene(payloadReceive.scene || FriendshipSceneType.Unknown)
@@ -447,6 +546,10 @@ export function puppetImplementation (
       }
     },
 
+    /**
+     * @deprecated: should not use this API because it will be changed to
+     *  `messageFileStream` after Dec 31, 2021
+     */
     messageFile: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageFile()')
 
@@ -456,7 +559,7 @@ export function puppetImplementation (
         const fileBox = await puppet.messageFile(id)
 
         const response = new MessageFileResponse()
-        response.setFilebox(JSON.stringify(fileBox))
+        response.setFilebox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
@@ -465,6 +568,28 @@ export function puppetImplementation (
       }
     },
 
+    messageFileStream: async (call) => {
+      log.verbose('PuppetServiceImpl', 'messageFileStream()')
+
+      try {
+        const id = call.request.getId()
+
+        const fileBox  = await puppet.messageFile(id)
+        const response = await packFileBoxToPb(MessageFileStreamResponse)(fileBox)
+
+        response.on('error', e => call.destroy(e))
+        response.pipe(call)
+
+      } catch (e) {
+        log.error('PuppetServiceImpl', 'grpcError() messageFileStream() rejection: %s', e && e.message)
+        call.destroy(e)
+      }
+    },
+
+    /**
+     * @deprecated: should not use this API because it will be changed to
+     *  `messageFileStream` after Dec 31, 2021
+     */
     messageImage: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageImage()')
 
@@ -475,12 +600,31 @@ export function puppetImplementation (
         const fileBox = await puppet.messageImage(id, type as number as ImageType)
 
         const response = new MessageImageResponse()
-        response.setFilebox(JSON.stringify(fileBox))
+        response.setFilebox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
       } catch (e) {
         return grpcError('messageImage', e, callback)
+      }
+    },
+
+    messageImageStream: async (call) => {
+      log.verbose('PuppetServiceImpl', 'messageImageStream()')
+
+      try {
+        const id = call.request.getId()
+        const type = call.request.getType()
+
+        const fileBox  = await puppet.messageImage(id, type as number as ImageType)
+        const response = await packFileBoxToPb(MessageImageStreamResponse)(fileBox)
+
+        response.on('error', e => call.destroy(e))
+        response.pipe(call)
+
+      } catch (e) {
+        log.error('PuppetServiceImpl', 'grpcError() messageImageStream() rejection: %s', e && e.message)
+        call.destroy(e)
       }
     },
 
@@ -510,14 +654,19 @@ export function puppetImplementation (
 
         const payload = await puppet.messagePayload(id)
 
+        const mentionIdList = ('mentionIdList' in payload)
+          // Huan(202006) use `??` instead of `||` after eslint get fixed
+          ? payload.mentionIdList || []
+          : []
+
         const response = new MessagePayloadResponse()
         response.setFilename(payload.filename || '')
         response.setFromId(payload.fromId || '')
         response.setId(payload.id)
-        response.setMentionIdsList(payload.mentionIdList)
+        response.setMentionIdsList(mentionIdList)
         response.setRoomId(payload.roomId || '')
         response.setText(payload.text || '')
-        response.setTimestamp(payload.timestamp)
+        response.setTimestamp(Math.floor(payload.timestamp))
         response.setToId(payload.toId || '')
         response.setType(payload.type as MessageTypeMap[keyof MessageTypeMap])
 
@@ -542,7 +691,7 @@ export function puppetImplementation (
         return callback(null, response)
 
       } catch (e) {
-        grpcError('messageRecall', e, callback)
+        return grpcError('messageRecall', e, callback)
       }
     },
 
@@ -593,6 +742,31 @@ export function puppetImplementation (
 
       } catch (e) {
         return grpcError('messageSendFile', e, callback)
+      }
+    },
+
+    messageSendFileStream: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageSendFileStream()')
+
+      try {
+        const requestArgs = await unpackConversationIdFileBoxArgsFromPb(call)
+        const conversationId = requestArgs.conversationId
+        const fileBox = requestArgs.fileBox
+
+        const messageId = await puppet.messageSendFile(conversationId, fileBox)
+
+        const response = new MessageSendFileStreamResponse()
+
+        if (messageId) {
+          const idWrapper = new StringValue()
+          idWrapper.setValue(messageId)
+          response.setId(idWrapper)
+        }
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageSendFileStream', e, callback)
       }
     },
 
@@ -753,7 +927,7 @@ export function puppetImplementation (
         const fileBox = await puppet.roomAvatar(roomId)
 
         const response = new RoomAvatarResponse()
-        response.setFilebox(JSON.stringify(fileBox))
+        response.setFilebox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
@@ -844,7 +1018,7 @@ export function puppetImplementation (
         response.setInviterId(payload.inviterId)
         response.setMemberCount(payload.memberCount)
         response.setMemberIdsList(payload.memberIdList)
-        response.setTimestamp(payload.timestamp)
+        response.setTimestamp(Math.floor(payload.timestamp))
         response.setTopic(payload.topic)
 
         return callback(null, response)
@@ -1035,6 +1209,7 @@ export function puppetImplementation (
         }
 
         await puppet.stop()
+        readyPayload = undefined
 
         return callback(null, new StopResponse())
 

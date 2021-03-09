@@ -41,7 +41,7 @@ export const dingHeartbeat = (puppet: Puppet) => (n: number) => puppet.ding(`rec
  */
 export const switchOn$  = (puppet: Puppet) => fromEvent(puppet.state, 'on')
 export const switchOff$ = (puppet: Puppet) => fromEvent(puppet.state, 'off')
-export const heartbeat$ = (puppet: Puppet) => fromEvent<{}>(puppet, 'heartbeat')
+export const heartbeat$ = (puppet: Puppet) => fromEvent<{}>(puppet as any, 'heartbeat')
 
 /**
  * Streams
@@ -50,10 +50,10 @@ export const heartbeat$ = (puppet: Puppet) => fromEvent<{}>(puppet, 'heartbeat')
 // Heartbeat stream is like ECG (ElectroCardioGraphy)
 export const switchOnHeartbeat$ = (puppet: Puppet) => switchOn$(puppet).pipe(
   filter(switchSuccess),
-  tap(_ => log.verbose('Puppet', 'recover$() switchOn$ fired')),
+  tap(_ => log.verbose('PuppetService', 'recover$() switchOn$ fired')),
   switchMap(_ => heartbeat$(puppet).pipe(
     startWith(undefined), // initial beat
-    tap(payload => log.verbose('Puppet', 'recover$() heartbeat: %s', JSON.stringify(payload))),
+    tap(payload => log.verbose('PuppetService', 'recover$() heartbeat: %s', JSON.stringify(payload))),
   ))
 )
 
@@ -64,25 +64,25 @@ export const switchOnHeartbeat$ = (puppet: Puppet) => switchOn$(puppet).pipe(
  *  https://github.com/grpc/grpc/blob/master/doc/keepalive.md
  *    GRPC_ARG_KEEPALIVE_TIMEOUT_MS 20000 (20 seconds)  20000 (20 seconds)
  */
-const HOSTIE_KEEPALIVE_TIMEOUT = 15 * 1000
+const PUPPET_SERVICE_KEEPALIVE_TIMEOUT = 15 * 1000
 
 let HEARTBEAT_COUNTER = 0
 
 // Ding is like CPR (Cardio Pulmonary Resuscitation)
 export const heartbeatDing$ = (puppet: Puppet) => switchOnHeartbeat$(puppet).pipe(
-  debounce(() => interval(HOSTIE_KEEPALIVE_TIMEOUT)),
-  tap(_ => log.verbose('Puppet', 'recover$() heartbeatDing()')),
+  debounce(() => interval(PUPPET_SERVICE_KEEPALIVE_TIMEOUT)),
+  tap(_ => log.verbose('PuppetService', 'recover$() heartbeatDing()')),
   mapTo(HEARTBEAT_COUNTER++),
   tap(dingHeartbeat(puppet)),
 )
 
-const HOSTIE_RESET_TIMEOUT = 60 * 1000
+const PUPPET_SERVICE_RESET_TIMEOUT = 60 * 1000
 
 // Reset is like AED (Automated External Defibrillator)
 export const heartbeatReset$ = (puppet: Puppet) => switchOnHeartbeat$(puppet).pipe(
-  debounce(_ => interval(HOSTIE_RESET_TIMEOUT)),
-  tap(_ => log.verbose('Puppet', 'recover$() heartbeatReset()')),
-  switchMap(_ => interval(HOSTIE_RESET_TIMEOUT).pipe(
+  debounce(_ => interval(PUPPET_SERVICE_RESET_TIMEOUT)),
+  tap(_ => log.verbose('PuppetService', 'recover$() heartbeatReset()')),
+  switchMap(_ => interval(PUPPET_SERVICE_RESET_TIMEOUT).pipe(
     // map(n => `AED#${n}`),
     tap(resetPuppet(puppet)),
     takeUntil(heartbeat$(puppet)),
