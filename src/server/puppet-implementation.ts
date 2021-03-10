@@ -437,7 +437,8 @@ export function puppetImplementation (
       try {
         const contactId = call.request.getContactId()
         const optionsText = call.request.getOptions()
-        const options = JSON.parse(optionsText) as FriendshipAddOptions
+        // FIXME: for backward compatibility, need to be removed after all puppet has updated.
+        const options = (JSON.parse(optionsText) || call.request.getHello()) as FriendshipAddOptions
 
         await puppet.friendshipAdd(contactId, options)
         return callback(null, new FriendshipAddResponse())

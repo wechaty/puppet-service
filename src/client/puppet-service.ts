@@ -1457,6 +1457,9 @@ export class PuppetService extends Puppet {
     const request = new FriendshipAddRequest()
     request.setContactId(contactId)
     request.setOptions(JSON.stringify(options))
+    // FIXME: for backward compatibility, need to be removed after all puppet has updated.
+    const hello = typeof options === 'string' ? options : options.hello!
+    request.setHello(hello)
 
     await util.promisify(
       this.grpcClient!.friendshipAdd.bind(this.grpcClient)
