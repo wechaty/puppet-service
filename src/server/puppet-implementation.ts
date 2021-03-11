@@ -436,11 +436,12 @@ export function puppetImplementation (
 
       try {
         const contactId = call.request.getContactId()
-        const optionsText = call.request.getOptions()
+        const options = call.request.getOptions()
+        const hello = call.request.getHello()
         // FIXME: for backward compatibility, need to be removed after all puppet has updated.
-        const options = (JSON.parse(optionsText) || call.request.getHello()) as FriendshipAddOptions
+        const friendshipAddOptions = (options || hello) as FriendshipAddOptions
 
-        await puppet.friendshipAdd(contactId, options)
+        await puppet.friendshipAdd(contactId, friendshipAddOptions)
         return callback(null, new FriendshipAddResponse())
 
       } catch (e) {
