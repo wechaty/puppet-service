@@ -80,6 +80,7 @@ import {
   FriendshipSearchWeixinRequest,
   FriendshipPayloadRequest,
   FriendshipAddRequest,
+  FriendshipAddOptions as GrpcFriendshipAddOptions,
   FriendshipAcceptRequest,
   RoomMemberListRequest,
   RoomMemberPayloadRequest,
@@ -1456,7 +1457,11 @@ export class PuppetService extends Puppet {
 
     const request = new FriendshipAddRequest()
     request.setContactId(contactId)
-    request.setOptions(options)
+    const grpcOptions = new GrpcFriendshipAddOptions()
+    grpcOptions.setRoomId(options.roomId)
+    grpcOptions.setContactId(options.contactId)
+    grpcOptions.setHello(options.hello)
+    request.setOptions(grpcOptions)
     // FIXME: for backward compatibility, need to be removed after all puppet has updated.
     const hello = typeof options === 'string' ? options : options.hello!
     request.setHello(hello)
