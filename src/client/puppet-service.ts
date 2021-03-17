@@ -1457,14 +1457,15 @@ export class PuppetService extends Puppet {
 
     const request = new FriendshipAddRequest()
     request.setContactId(contactId)
-    const grpcOptions = new GrpcFriendshipAddOptions()
-    grpcOptions.setRoomId(options.roomId)
-    grpcOptions.setContactId(options.contactId)
-    grpcOptions.setHello(options.hello)
-    request.setOptions(grpcOptions)
+
     // FIXME: for backward compatibility, need to be removed after all puppet has updated.
-    const hello = typeof options === 'string' ? options : options.hello!
-    request.setHello(hello)
+    if (typeof options === 'string') {
+      request.setHello(options)
+    } else {
+      request.setHello(options.hello!)
+      request.setInviterRoomId(options.contactId)
+      request.setInviterContactId(options.roomId)
+    }
 
     await util.promisify(
       this.grpcClient!.friendshipAdd.bind(this.grpcClient)

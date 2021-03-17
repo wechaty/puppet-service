@@ -436,15 +436,19 @@ export function puppetImplementation (
 
       try {
         const contactId = call.request.getContactId()
-        const callOptions = call.request.getOptions()
-        const options = {
-          roomId: callOptions.getRoomId(),
-          contactId: callOptions.getContactId(),
-          hello: callOptions.getHello(),
-        }
         // FIXME: for backward compatibility, need to be removed after all puppet has updated.
         const hello = call.request.getHello()
-        const friendshipAddOptions = (options || hello) as FriendshipAddOptions
+        const inviterContactId = call.request.getInviterContactId()
+        const inviterRoomId = call.request.getInviterRoomId()
+
+        let friendshipAddOptions: FriendshipAddOptions = hello
+        if (inviterContactId || inviterRoomId) {
+          friendshipAddOptions = {
+            roomId: inviterRoomId,
+            contactId: inviterContactId,
+            hello,
+          }
+        }
 
         await puppet.friendshipAdd(contactId, friendshipAddOptions)
         return callback(null, new FriendshipAddResponse())
