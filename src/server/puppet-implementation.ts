@@ -695,6 +695,25 @@ export function puppetImplementation (
       }
     },
 
+    messageForward: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageForward()')
+
+      try {
+        const conversationId = call.request.getConversationId()
+        const messageId = call.request.getMessageId()
+
+        const id = await puppet.messageForward(conversationId, messageId)
+
+        const response = new MessageForwardResponse()
+        response.setId(id)
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageForward', e, callback)
+      }
+    },
+
     messageSendContact: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageSendContact()')
 

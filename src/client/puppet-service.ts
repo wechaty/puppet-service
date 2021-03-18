@@ -920,6 +920,23 @@ export class PuppetService extends Puppet {
     return response.getSuccess()
   }
 
+  public async messageForward (
+    conversationId: string,
+    messageId: string,
+  ): Promise<string | void> {
+    log.verbose('PuppetService', 'messageForward(%s, %s)', conversationId, messageId)
+
+    const request = new MessageForwardRequest()
+    request.setConversationId(conversationId)
+    request.setMessageId(messageId)
+
+    const response = await util.promisify(
+      this.grpcClient!.messageForward.bind(this.grpcClient)
+    )(request)
+
+    return response.getId()
+  }
+
   public async messageFile (id: string): Promise<FileBox> {
     log.verbose('PuppetService', 'messageFile(%s)', id)
 
