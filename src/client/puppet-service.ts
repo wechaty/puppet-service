@@ -1,7 +1,7 @@
 import util from 'util'
 
 import { FileBoxType } from 'file-box'
-import grpc from 'grpc'
+import * as grpc from '@grpc/grpc-js'
 import https from 'https'
 import http from 'http'
 

@@ -62,7 +62,7 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.2.11",
-    "wechaty-grpc": "^0.21.2",
+    "wechaty-grpc": "^0.23.5",
     "rxjs": "^6.6.6",
     "stronger-typed-streams": "^0.2.0"
   },

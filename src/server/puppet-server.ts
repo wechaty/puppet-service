@@ -1,5 +1,5 @@
 import util from 'util'
-import grpc from 'grpc'
+import * as grpc from '@grpc/grpc-js'
 
 import {
   Puppet,
@@ -62,7 +62,7 @@ export class PuppetServer {
     )
 
     // 127.0.0.1:8788
-    const port = this.grpcServer.bind(
+    const port = await util.promisify(this.grpcServer.bindAsync.bind(this.grpcServer))(
       this.options.endpoint,
       grpc.ServerCredentials.createInsecure()
     )
