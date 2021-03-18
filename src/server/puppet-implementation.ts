@@ -599,6 +599,8 @@ export function puppetImplementation (
       }
     },
 
+    messageForward: async () => {},
+
     /**
      * @deprecated: should not use this API because it will be changed to
      *  `messageFileStream` after Dec 31, 2021
@@ -707,8 +709,6 @@ export function puppetImplementation (
         return grpcError('messageRecall', e, callback)
       }
     },
-
-    messageForward: async () => {},
 
     messageSendContact: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageSendContact()')
