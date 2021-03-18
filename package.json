@@ -61,7 +61,7 @@
     "wechaty-puppet": "*"
   },
   "dependencies": {
-    "@chatie/grpc": "^0.21.2",
+    "wechaty-grpc": "^0.21.2",
     "@reduxjs/toolkit": "^1.5.0",
     "redux": "^4.0.5",
     "redux-observable": "^2.0.0-alpha.0",
