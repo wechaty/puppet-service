@@ -60,7 +60,7 @@ import {
   MessageSendFileStreamResponse,
   MessageImageStreamResponse,
   MessageFileStreamResponse,
-}                                   from '@chatie/grpc'
+}                                   from 'wechaty-grpc'
 
 import {
   FileBox,
@@ -444,9 +444,9 @@ export function puppetImplementation (
         let friendshipAddOptions: FriendshipAddOptions = hello
         if (sourceContactId || sourceRoomId) {
           friendshipAddOptions = {
-            contactId: sourceContactId,
+            contactId: sourceContactId?.getValue(),
             hello,
-            roomId: sourceRoomId,
+            roomId: sourceRoomId?.getValue(),
           }
         }
 
@@ -707,6 +707,8 @@ export function puppetImplementation (
         return grpcError('messageRecall', e, callback)
       }
     },
+
+    messageForward: async () => {},
 
     messageSendContact: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageSendContact()')
