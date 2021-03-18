@@ -438,14 +438,14 @@ export function puppetImplementation (
         const contactId = call.request.getContactId()
         // FIXME: for backward compatibility, need to be removed after all puppet has updated.
         const hello = call.request.getHello()
-        const inviterContactId = call.request.getInviterContactId()
-        const inviterRoomId = call.request.getInviterRoomId()
+        const sourceContactId = call.request.getSourceContactId()
+        const sourceRoomId = call.request.getSourceRoomId()
 
         let friendshipAddOptions: FriendshipAddOptions = hello
-        if (inviterContactId || inviterRoomId) {
+        if (sourceContactId || sourceRoomId) {
           friendshipAddOptions = {
-            roomId: inviterRoomId,
-            contactId: inviterContactId,
+            roomId: sourceRoomId,
+            contactId: sourceContactId,
             hello,
           }
         }

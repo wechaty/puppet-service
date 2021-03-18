@@ -1463,8 +1463,8 @@ export class PuppetService extends Puppet {
       request.setHello(options)
     } else {
       request.setHello(options.hello!)
-      request.setInviterRoomId(options.contactId)
-      request.setInviterContactId(options.roomId)
+      request.setSourceRoomId(options.contactId)
+      request.setSourceContactId(options.roomId)
     }
 
     await util.promisify(
