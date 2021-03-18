@@ -444,9 +444,9 @@ export function puppetImplementation (
         let friendshipAddOptions: FriendshipAddOptions = hello
         if (sourceContactId || sourceRoomId) {
           friendshipAddOptions = {
-            roomId: sourceRoomId,
             contactId: sourceContactId,
             hello,
+            roomId: sourceRoomId,
           }
         }
 
