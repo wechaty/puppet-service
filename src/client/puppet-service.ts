@@ -80,7 +80,6 @@ import {
   FriendshipSearchWeixinRequest,
   FriendshipPayloadRequest,
   FriendshipAddRequest,
-  FriendshipAddOptions as GrpcFriendshipAddOptions,
   FriendshipAcceptRequest,
   RoomMemberListRequest,
   RoomMemberPayloadRequest,
@@ -102,7 +101,7 @@ import {
   MessageSendFileStreamResponse,
   MessageSendFileStreamRequest,
   MessageSendFileRequest,
-}                                   from '@chatie/grpc'
+}                                   from 'wechaty-grpc'
 
 import { Subscription } from 'rxjs'
 
@@ -1463,8 +1462,12 @@ export class PuppetService extends Puppet {
       request.setHello(options)
     } else {
       request.setHello(options.hello!)
-      request.setSourceRoomId(options.contactId)
-      request.setSourceContactId(options.roomId)
+      const contactIdWrapper = new StringValue()
+      contactIdWrapper.setValue(options.contactId || '')
+      const roomIdWrapper = new StringValue()
+      roomIdWrapper.setValue(options.roomId || '')
+      request.setSourceRoomId(roomIdWrapper)
+      request.setSourceContactId(contactIdWrapper)
     }
 
     await util.promisify(
