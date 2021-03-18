@@ -1,5 +1,4 @@
 import util from 'util'
-import * as grpc from '@grpc/grpc-js'
 
 import {
   Puppet,
@@ -10,6 +9,7 @@ import {
 }                     from 'wechaty-grpc'
 
 import {
+  grpc,
   log,
   VERSION,
   GRPC_OPTIONS,
