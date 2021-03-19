@@ -19,6 +19,7 @@ import {
   LogoutResponse,
   MessageContactResponse,
   MessageFileResponse,
+  MessageForwardResponse,
   MessageMiniProgramResponse,
   MessagePayloadResponse,
   MessageRecallResponse,
@@ -599,7 +600,28 @@ export function puppetImplementation (
       }
     },
 
-    messageForward: async () => {},
+    messageForward: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageForward()')
+
+      try {
+        const conversationId = call.request.getConversationId()
+        const messageId = call.request.getMessageId()
+
+        const id = await puppet.messageForward(conversationId, messageId)
+
+        const response = new MessageForwardResponse()
+        if (id) {
+          const idWrapper = new StringValue()
+          idWrapper.setValue(id)
+          response.setId(idWrapper)
+        }
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageForward', e, callback)
+      }
+    },
 
     /**
      * @deprecated: should not use this API because it will be changed to
