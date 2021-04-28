@@ -822,6 +822,15 @@ export class PuppetService extends Puppet {
 
   /**
    *
+   * Conversation
+   *
+   */
+  public async conversationRead (conversationId: string) {
+    log.verbose('PuppetService', 'conversationRead(%s)', conversationId)
+  }
+
+  /**
+   *
    * Message
    *
    */
