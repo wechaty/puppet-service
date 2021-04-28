@@ -112,6 +112,7 @@ import {
   WECHATY_PUPPET_SERVICE_TOKEN,
   WECHATY_PUPPET_SERVICE_ENDPOINT,
   GRPC_OPTIONS,
+  GET_CHATIE_ENDPOINT_LIST,
 }                                   from '../config'
 
 import {
@@ -170,11 +171,7 @@ export class PuppetService extends Puppet {
   ): Promise<{ ip?: string, port?: number }> {
     log.verbose('PuppetService', 'discoverServiceIp(%s)', token)
 
-    const CHATIE_ENDPOINT_LIST = [
-      'https://api.chatie.io',
-      'https://chatieio.herokuapp.com',
-      'http://68.79.16.140',  // from @windmemory,
-    ]
+    const CHATIE_ENDPOINT_LIST = GET_CHATIE_ENDPOINT_LIST()
 
     try {
       const result = await Promise.race<Promise<{ ip: string, port: number }>>([
