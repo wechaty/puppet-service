@@ -52,9 +52,9 @@ export const WECHATY_PUPPET_SERVICE_ENDPOINT = () => {
 }
 
 export const GET_CHATIE_ENDPOINT_LIST = () => {
-  const privateEndpointList = process.env.PRIVATE_ENDPOINT_LIST // e.g. https://aaa.aaa,http://bbb.bbb
-  if (privateEndpointList) {
-    return privateEndpointList.split(',')
+  const serviceDiscoveryEndpointList = process.env.SERVICE_DISCOVERY_ENDPOINT_LIST // e.g. https://aaa.aaa,http://bbb.bbb
+  if (serviceDiscoveryEndpointList) {
+    return serviceDiscoveryEndpointList.split(',')
   }
   return [
     'https://api.chatie.io',
