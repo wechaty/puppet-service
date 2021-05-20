@@ -112,7 +112,7 @@ import {
   WECHATY_PUPPET_SERVICE_TOKEN,
   WECHATY_PUPPET_SERVICE_ENDPOINT,
   GRPC_OPTIONS,
-  GET_CHATIE_ENDPOINT_LIST,
+  GET_CHATIE_ENDPOINT,
 }                                   from '../config'
 
 import {
@@ -171,15 +171,18 @@ export class PuppetService extends Puppet {
   ): Promise<{ ip?: string, port?: number }> {
     log.verbose('PuppetService', 'discoverServiceIp(%s)', token)
 
-    const CHATIE_ENDPOINT_LIST = GET_CHATIE_ENDPOINT_LIST()
+    const chatieEndpoint = GET_CHATIE_ENDPOINT()
 
     try {
-      const result = await Promise.race<Promise<{ ip: string, port: number }>>([
-        ...CHATIE_ENDPOINT_LIST.map(endpoint => this.getServiceIp(endpoint, token)),
-        // eslint-disable-next-line promise/param-names
-        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5 * 1000)),
-      ])
-      return result
+      if (Array.isArray(chatieEndpoint)) {
+        const result = await Promise.race<Promise<{ ip: string, port: number }>>([
+          ...chatieEndpoint.map(endpoint => this.getServiceIp(endpoint, token)),
+          // eslint-disable-next-line promise/param-names
+          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5 * 1000)),
+        ])
+        return result
+      }
+      return this.getServiceIp(chatieEndpoint, token)
     } catch (e) {
       log.warn(`discoverServiceIp() failed to get any ip info from all service endpoints.\n${e.stack}`)
       return {}
@@ -827,6 +830,7 @@ export class PuppetService extends Puppet {
    */
   public async conversationRead (conversationId: string) {
     log.verbose('PuppetService', 'conversationRead(%s)', conversationId)
+    throw new Error('unsupported conversation read now.')
   }
 
   /**

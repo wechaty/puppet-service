@@ -51,14 +51,12 @@ export const WECHATY_PUPPET_SERVICE_ENDPOINT = () => {
   return undefined
 }
 
-export const GET_CHATIE_ENDPOINT_LIST = () => {
-  const serviceDiscoveryEndpointList = process.env.SERVICE_DISCOVERY_ENDPOINT_LIST // e.g. https://aaa.aaa,http://bbb.bbb
-  if (serviceDiscoveryEndpointList) {
-    return serviceDiscoveryEndpointList.split(',')
+export const GET_CHATIE_ENDPOINT = () => {
+  if (process.env.SERVICE_DISCOVERY_ENDPOINT) {
+    return process.env.SERVICE_DISCOVERY_ENDPOINT
   }
   return [
     'https://api.chatie.io',
-    'https://chatieio.herokuapp.com',
     'http://68.79.16.140',  // from @windmemory,
   ]
 }
