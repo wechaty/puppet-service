@@ -174,15 +174,11 @@ export class PuppetService extends Puppet {
     const chatieEndpoint = GET_CHATIE_ENDPOINT()
 
     try {
-      if (Array.isArray(chatieEndpoint)) {
-        const result = await Promise.race<Promise<{ ip: string, port: number }>>([
-          ...chatieEndpoint.map(endpoint => this.getServiceIp(endpoint, token)),
-          // eslint-disable-next-line promise/param-names
-          new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5 * 1000)),
-        ])
-        return result
-      }
-      return this.getServiceIp(chatieEndpoint, token)
+      return Promise.race<Promise<{ ip: string, port: number }>>([
+        this.getServiceIp(chatieEndpoint, token),
+        // eslint-disable-next-line promise/param-names
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5 * 1000)),
+      ])
     } catch (e) {
       log.warn(`discoverServiceIp() failed to get any ip info from all service endpoints.\n${e.stack}`)
       return {}
