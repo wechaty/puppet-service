@@ -1,4 +1,4 @@
-import grpc             from 'grpc'
+import { grpc } from 'wechaty-grpc'
 
 import {
   log,
@@ -15,6 +15,7 @@ export function grpcError (
     ...e,
     code: grpc.status.INTERNAL,
     details: e.message,
+    metadata: new grpc.Metadata(),
   }
   return callback(error, null)
 }
