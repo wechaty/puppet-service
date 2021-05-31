@@ -40,11 +40,6 @@ class PuppetTest extends PuppetMock {
     super(...args)
   }
 
-  public async conversationRead (conversationId: string) {
-    log.verbose('PuppetTest', 'conversationRead(%s)', conversationId)
-    throw new Error('unsupported conversation read now.')
-  }
-
   public async contactRawPayload (id: string): Promise<ContactPayload> {
     log.verbose('PuppetTest', 'contactRawPayload(%s)', id)
     const rawPayload: ContactPayload = {

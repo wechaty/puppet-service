@@ -1,7 +1,6 @@
 import util from 'util'
 
 import { FileBoxType } from 'file-box'
-import grpc from 'grpc'
 import https from 'https'
 import http from 'http'
 
@@ -39,9 +38,11 @@ import {
   RoomMemberPayload,
   RoomPayload,
   UrlLinkPayload,
+  throwUnsupportedError,
 }                         from 'wechaty-puppet'
 
 import {
+  grpc,
   PuppetClient,
   EventRequest,
   EventResponse,
@@ -409,7 +410,7 @@ export class PuppetService extends Puppet {
       .on('end', () => {
         log.verbose('PuppetService', 'startGrpcStream() eventStream.on(end)')
       })
-      .on('error', e => {
+      .on('error', (e: unknown) => {
         // https://github.com/wechaty/wechaty-puppet-service/issues/16
         log.verbose('PuppetService', 'startGrpcStream() eventStream.on(error) %s', e)
         const reason = 'startGrpcStream() eventStream.on(error) ' + e
@@ -824,9 +825,12 @@ export class PuppetService extends Puppet {
    * Conversation
    *
    */
-  public async conversationRead (conversationId: string) {
-    log.verbose('PuppetService', 'conversationRead(%s)', conversationId)
-    throw new Error('unsupported conversation read now.')
+  conversationMarkRead (
+    conversationId: string,
+    read = true,
+  ) : Promise<void> {
+    log.verbose('PuppetService', 'conversationMarkRead(%s, %s)', conversationId, read)
+    throwUnsupportedError('not implemented. See https://github.com/wechaty/wechaty-puppet/pull/132')
   }
 
   /**

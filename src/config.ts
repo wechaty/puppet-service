@@ -1,6 +1,6 @@
 /// <reference path="./typings.d.ts" />
 
-import { log } from 'wechaty-puppet'
+import { log }  from 'wechaty-puppet'
 
 export { VERSION } from './version'
 
@@ -52,7 +52,7 @@ export const WECHATY_PUPPET_SERVICE_ENDPOINT = () => {
 }
 
 export const GET_CHATIE_ENDPOINT = () => {
-  return process.env.SERVICE_DISCOVERY_ENDPOINT || 'https://api.chatie.io'
+  return process.env.SERVICE_DISCOVE5RY_ENDPOINT ?? 'https://api.chatie.io'
 }
 
 export {
