@@ -12,13 +12,13 @@ export const GRPC_OPTIONS = {
 
 // Huan(202011): use a function to return the value in time.
 export const WECHATY_PUPPET_SERVICE_TOKEN    = () => {
-  if (process.env.WECHATY_PUPPET_SERVICE_TOKEN) {
-    return process.env.WECHATY_PUPPET_SERVICE_TOKEN
+  if (process.env['WECHATY_PUPPET_SERVICE_TOKEN']) {
+    return process.env['WECHATY_PUPPET_SERVICE_TOKEN']
   }
   /**
    * Huan(202102): remove this deprecated warning after Dec 31, 2021
    */
-  if (process.env.WECHATY_PUPPET_HOSTIE_TOKEN) {
+  if (process.env['WECHATY_PUPPET_HOSTIE_TOKEN']) {
     log.warn('wechaty-puppet-service', [
       '',
       'WECHATY_PUPPET_HOSTIE_TOKEN has been deprecated,',
@@ -26,19 +26,19 @@ export const WECHATY_PUPPET_SERVICE_TOKEN    = () => {
       'See: https://github.com/wechaty/wechaty-puppet-service/issues/118',
       '',
     ].join(' '))
-    return process.env.WECHATY_PUPPET_HOSTIE_TOKEN
+    return process.env['WECHATY_PUPPET_HOSTIE_TOKEN']
   }
   return undefined
 }
 
 export const WECHATY_PUPPET_SERVICE_ENDPOINT = () => {
-  if (process.env.WECHATY_PUPPET_SERVICE_ENDPOINT) {
-    return process.env.WECHATY_PUPPET_SERVICE_ENDPOINT
+  if (process.env['WECHATY_PUPPET_SERVICE_ENDPOINT']) {
+    return process.env['WECHATY_PUPPET_SERVICE_ENDPOINT']
   }
   /**
    * Huan(202102): remove this deprecated warning after Dec 31, 2021
    */
-  if (process.env.WECHATY_PUPPET_HOSTIE_ENDPOINT) {
+  if (process.env['WECHATY_PUPPET_HOSTIE_ENDPOINT']) {
     log.warn('wechaty-puppet-service', [
       '',
       'WECHATY_PUPPET_HOSTIE_ENDPOINT has been deprecated,',
@@ -46,13 +46,13 @@ export const WECHATY_PUPPET_SERVICE_ENDPOINT = () => {
       'See: https://github.com/wechaty/wechaty-puppet-service/issues/118',
       '',
     ].join(' '))
-    return process.env.WECHATY_PUPPET_HOSTIE_ENDPOINT
+    return process.env['WECHATY_PUPPET_HOSTIE_ENDPOINT']
   }
   return undefined
 }
 
 export const GET_CHATIE_ENDPOINT = () => {
-  return process.env.SERVICE_DISCOVE5RY_ENDPOINT ?? 'https://api.chatie.io'
+  return process.env['SERVICE_DISCOVE5RY_ENDPOINT'] ?? 'https://api.chatie.io'
 }
 
 export {
