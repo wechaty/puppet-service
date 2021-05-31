@@ -110,10 +110,10 @@ import { Subscription } from 'rxjs'
 import {
   log,
   VERSION,
-  WECHATY_PUPPET_SERVICE_TOKEN,
-  WECHATY_PUPPET_SERVICE_ENDPOINT,
   GRPC_OPTIONS,
-  GET_CHATIE_ENDPOINT,
+  GET_WECHATY_PUPPET_SERVICE_TOKEN,
+  GET_WECHATY_PUPPET_SERVICE_ENDPOINT,
+  GET_WECHATY_SERVICE_DISCOVERY_ENDPOINT,
 }                                   from '../config'
 
 import {
@@ -159,8 +159,8 @@ export class PuppetService extends Puppet {
     public override options: PuppetOptions = {},
   ) {
     super(options)
-    options.endpoint = options.endpoint || WECHATY_PUPPET_SERVICE_ENDPOINT()
-    options.token    = options.token    || WECHATY_PUPPET_SERVICE_TOKEN()
+    options.endpoint = GET_WECHATY_PUPPET_SERVICE_ENDPOINT(options.endpoint)
+    options.token    = GET_WECHATY_PUPPET_SERVICE_TOKEN(options.token)
 
     // this.heartbeatDebounceQueue = new DebounceQueue(HEARTBEAT_DEBOUNCE_TIME * 1000)
 
@@ -172,13 +172,21 @@ export class PuppetService extends Puppet {
   ): Promise<{ ip?: string, port?: number }> {
     log.verbose('PuppetService', 'discoverServiceIp(%s)', token)
 
-    const chatieEndpoint = GET_CHATIE_ENDPOINT()
+    const chatieEndpoint = GET_WECHATY_SERVICE_DISCOVERY_ENDPOINT()
 
     try {
-      return Promise.race<Promise<{ ip: string, port: number }>>([
+      return Promise.race<
+        Promise<{
+          ip: string,
+          port: number
+        }>
+      >([
         this.getServiceIp(chatieEndpoint, token),
         // eslint-disable-next-line promise/param-names
-        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 5 * 1000)),
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error('ETIMEOUT')),
+          5 * 1000,
+        )),
       ])
     } catch (e) {
       log.warn(`discoverServiceIp() failed to get any ip info from all service endpoints.\n${e.stack}`)

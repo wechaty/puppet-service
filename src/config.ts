@@ -2,16 +2,20 @@
 
 import { log }  from 'wechaty-puppet'
 
-export { VERSION } from './version'
+import { VERSION } from './version'
 
-export const GRPC_OPTIONS = {
+const GRPC_OPTIONS = {
   // https://github.com/wechaty/wechaty-puppet-service/issues/86
   // 'grpc.max_receive_message_length': 1024 * 1024 * 150,
   // 'grpc.max_send_message_length': 1024 * 1024 * 150,
 }
 
 // Huan(202011): use a function to return the value in time.
-export const WECHATY_PUPPET_SERVICE_TOKEN    = () => {
+const GET_WECHATY_PUPPET_SERVICE_TOKEN = (token?: string) => {
+  if (token) {
+    return token
+  }
+
   if (process.env['WECHATY_PUPPET_SERVICE_TOKEN']) {
     return process.env['WECHATY_PUPPET_SERVICE_TOKEN']
   }
@@ -31,7 +35,11 @@ export const WECHATY_PUPPET_SERVICE_TOKEN    = () => {
   return undefined
 }
 
-export const WECHATY_PUPPET_SERVICE_ENDPOINT = () => {
+const GET_WECHATY_PUPPET_SERVICE_ENDPOINT = (endpoint?: string) => {
+  if (endpoint) {
+    return endpoint
+  }
+
   if (process.env['WECHATY_PUPPET_SERVICE_ENDPOINT']) {
     return process.env['WECHATY_PUPPET_SERVICE_ENDPOINT']
   }
@@ -51,10 +59,20 @@ export const WECHATY_PUPPET_SERVICE_ENDPOINT = () => {
   return undefined
 }
 
-export const GET_CHATIE_ENDPOINT = () => {
-  return process.env['SERVICE_DISCOVE5RY_ENDPOINT'] ?? 'https://api.chatie.io'
+const GET_WECHATY_SERVICE_DISCOVERY_ENDPOINT = (endpoint?: string) => {
+  if (endpoint) {
+    return endpoint
+  }
+
+  return process.env['WECHATY_SERVICE_DISCOVERY_ENDPOINT']
+    ?? 'https://api.chatie.io'
 }
 
 export {
   log,
+  GRPC_OPTIONS,
+  VERSION,
+  GET_WECHATY_PUPPET_SERVICE_ENDPOINT,
+  GET_WECHATY_PUPPET_SERVICE_TOKEN,
+  GET_WECHATY_SERVICE_DISCOVERY_ENDPOINT,
 }
