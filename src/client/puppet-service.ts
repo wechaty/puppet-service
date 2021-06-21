@@ -436,7 +436,7 @@ export class PuppetService extends Puppet {
   }
 
   private async grpcClientStart (): Promise<void> {
-    log.verbose('PuppetService', 'startGrpcStream()')
+    log.verbose('PuppetService', 'grpcClientStart()')
 
     try {
       await util.promisify(
