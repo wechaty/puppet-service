@@ -198,10 +198,16 @@ export class PuppetService extends Puppet {
     }
   }
 
-  private async getServiceIp (endpoint: string, token: string) {
+  private async getServiceIp (
+    endpoint : string,
+    token    : string,
+  ): Promise<{
+    ip   : string,
+    port : number,
+  }> {
     const url = `${endpoint}/v0/hosties/${token}`
 
-    return new Promise<{ port: number, ip: string }>((resolve, reject) => {
+    const jsonStr = await new Promise<string>((resolve, reject) => {
       const httpClient = /^https:\/\//.test(url) ? https : http
       httpClient.get(url, function (res) {
         let body = ''
@@ -209,12 +215,31 @@ export class PuppetService extends Puppet {
           body += chunk
         })
         res.on('end', function () {
-          resolve(JSON.parse(body))
+          resolve(body)
         })
       }).on('error', function (e) {
         reject(new Error(`PuppetService discoverServiceIp() endpoint<${url}> rejection: ${e}`))
       })
     })
+
+    try {
+      const result = JSON.parse(jsonStr) as { port: number, ip: string }
+      return result
+
+    } catch (e) {
+      console.error([
+        `wechaty-puppet-service: PuppetService.getServiceIp(${endpoint}, ${token}`,
+        'failed: unable to parse JSON str to object:',
+        '----- jsonStr START -----',
+        jsonStr,
+        '----- jsonStr END -----',
+      ].join('\n'))
+    }
+
+    return {
+      ip: '0.0.0.0',
+      port: 0,
+    }
   }
 
   protected async startGrpcClient (): Promise<void> {
@@ -231,7 +256,7 @@ export class PuppetService extends Puppet {
       let retries = MAX_SERVICE_IP_DISCOVERY_RETRIES
       while (retries > 0 && (!serviceIpResult.ip || serviceIpResult.ip === '0.0.0.0')) {
         log.warn(`No endpoint when starting grpc client, ${retries--} retry left. Reconnecting in 10 seconds...`)
-        await new Promise(resolve => setTimeout(resolve, 10 * 1000))
+        await new Promise<void>(resolve => setTimeout(resolve, 10 * 1000))
         serviceIpResult = await this.discoverServiceIp(this.options.token!)
       }
 
@@ -401,7 +426,7 @@ export class PuppetService extends Puppet {
       } catch (e) {
         if (retry-- > 0) {
           log.verbose('PuppetService', `startGrpcStream() connection failed, ${retry} retries left, reconnecting in 2 seconds...`)
-          await new Promise(resolve => setTimeout(resolve, 2 * 1000))
+          await new Promise<void>(resolve => setTimeout(resolve, 2 * 1000))
         } else {
           log.error('PuppetService', `startGrpcStream() connection failed and max retries has been reached. Error:\n${e.stack}`)
           break
@@ -446,7 +471,7 @@ export class PuppetService extends Puppet {
     } catch (error) {
       const msgDetail = error.details
       if (msgDetail === 'No connection established') {
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise<void>(resolve => setTimeout(resolve, 2000))
         this.emit('reset', { data: msgDetail })
       } else {
         throw error
