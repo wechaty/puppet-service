@@ -1223,7 +1223,7 @@ export function puppetImplementation (
     },
 
     start: async (call, callback) => {
-      log.verbose('PuppetServiceImpl', 'start()')
+      log.info('PuppetServiceImpl', 'start()')
       void call
 
       try {
@@ -1237,7 +1237,7 @@ export function puppetImplementation (
     },
 
     stop: async (call, callback) => {
-      log.verbose('PuppetServiceImpl', 'stop()')
+      log.info('PuppetServiceImpl', 'stop()')
       void call
 
       try {

@@ -32,7 +32,7 @@ export class PuppetServer {
   constructor (
     public readonly options: PuppetServerOptions,
   ) {
-    log.verbose('PuppetServer',
+    log.info('PuppetServer',
       'constructor({endpoint: "%s", puppet: "%s", token: "%s"})',
       options.endpoint,
       options.puppet,
@@ -45,7 +45,7 @@ export class PuppetServer {
   }
 
   public async start (): Promise<void> {
-    log.verbose('PuppetServer', 'start()')
+    log.info('PuppetServer', 'start()')
 
     if (this.grpcServer) {
       throw new Error('grpc server existed!')
@@ -75,7 +75,7 @@ export class PuppetServer {
   }
 
   public async stop (): Promise<void> {
-    log.verbose('PuppetServer', 'stop()')
+    log.info('PuppetServer', 'stop()')
 
     if (!this.grpcServer) {
       throw new Error('no grpc server')

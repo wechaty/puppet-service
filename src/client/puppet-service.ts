@@ -170,7 +170,7 @@ export class PuppetService extends Puppet {
   private async discoverServiceIp (
     token: string,
   ): Promise<{ ip?: string, port?: number }> {
-    log.verbose('PuppetService', 'discoverServiceIp(%s)', token)
+    log.info('PuppetService', 'discoverServiceIp(%s)', token)
 
     const chatieEndpoint = GET_WECHATY_SERVICE_DISCOVERY_ENDPOINT()
 
@@ -243,7 +243,7 @@ export class PuppetService extends Puppet {
   }
 
   protected async startGrpcClient (): Promise<void> {
-    log.verbose('PuppetService', 'startGrpcClient()')
+    log.info('PuppetService', 'startGrpcClient()')
 
     if (this.grpcClient) {
       throw new Error('puppetClient had already initialized')
@@ -279,7 +279,7 @@ export class PuppetService extends Puppet {
   }
 
   protected async stopGrpcClient (): Promise<void> {
-    log.verbose('PuppetService', 'stopGrpcClient()')
+    log.info('PuppetService', 'stopGrpcClient()')
 
     if (!this.grpcClient) {
       throw new Error('puppetClient had not initialized')
@@ -291,7 +291,7 @@ export class PuppetService extends Puppet {
 
   override async start (): Promise<void> {
     await super.start()
-    log.verbose('PuppetService', 'start()')
+    log.info('PuppetService', 'start()')
 
     if (!this.options.token) {
       const tokenNotFoundError = 'wechaty-puppet-service: WECHATY_PUPPET_SERVICE_TOKEN not found'
@@ -359,7 +359,7 @@ export class PuppetService extends Puppet {
 
   override async stop (): Promise<void> {
     await super.stop()
-    log.verbose('PuppetService', 'stop()')
+    log.info('PuppetService', 'stop()')
 
     if (this.state.off()) {
       log.warn('PuppetService', 'stop() is called on a OFF puppet. await ready(off) and return.')
@@ -413,7 +413,7 @@ export class PuppetService extends Puppet {
   }
 
   private async startGrpcStream (): Promise<void> {
-    log.verbose('PuppetService', 'startGrpcStream()')
+    log.info('PuppetService', 'startGrpcStream()')
 
     if (this.eventStream) {
       throw new Error('event stream exists')
@@ -425,7 +425,7 @@ export class PuppetService extends Puppet {
         this.eventStream = this.grpcClient!.event(new EventRequest())
       } catch (e) {
         if (retry-- > 0) {
-          log.verbose('PuppetService', `startGrpcStream() connection failed, ${retry} retries left, reconnecting in 2 seconds...`)
+          log.warn('PuppetService', `startGrpcStream() connection failed, ${retry} retries left, reconnecting in 2 seconds...`)
           await new Promise<void>(resolve => setTimeout(resolve, 2 * 1000))
         } else {
           log.error('PuppetService', `startGrpcStream() connection failed and max retries has been reached. Error:\n${e.stack}`)
@@ -442,11 +442,11 @@ export class PuppetService extends Puppet {
     this.eventStream
       .on('data', this.onGrpcStreamEvent.bind(this))
       .on('end', () => {
-        log.verbose('PuppetService', 'startGrpcStream() eventStream.on(end)')
+        log.info('PuppetService', 'startGrpcStream() eventStream.on(end)')
       })
       .on('error', (e: unknown) => {
         // https://github.com/wechaty/wechaty-puppet-service/issues/16
-        log.verbose('PuppetService', 'startGrpcStream() eventStream.on(error) %s', e)
+        log.error('PuppetService', 'startGrpcStream() eventStream.on(error) %s', e)
         const reason = 'startGrpcStream() eventStream.on(error) ' + e
         /**
          * The `Puppet` class have a throttleQueue for receiving the `reset` events
@@ -455,13 +455,13 @@ export class PuppetService extends Puppet {
         this.emit('reset', { data: reason })
       })
       .on('cancel', (...args: any[]) => {
-        log.verbose('PuppetService', 'startGrpcStream() eventStream.on(cancel), %s', JSON.stringify(args))
+        log.info('PuppetService', 'startGrpcStream() eventStream.on(cancel), %s', JSON.stringify(args))
       })
 
   }
 
   private async grpcClientStart (): Promise<void> {
-    log.verbose('PuppetService', 'grpcClientStart()')
+    log.info('PuppetService', 'grpcClientStart()')
 
     try {
       await util.promisify(
@@ -560,7 +560,7 @@ export class PuppetService extends Puppet {
   }
 
   private stopGrpcStream (): void {
-    log.verbose('PuppetService', 'stopGrpcStream()')
+    log.info('PuppetService', 'stopGrpcStream()')
 
     if (!this.eventStream) {
       log.verbose('PuppetService', 'no eventStream when stop, skip destroy.')
@@ -579,7 +579,7 @@ export class PuppetService extends Puppet {
   }
 
   override async logout (): Promise<void> {
-    log.verbose('PuppetService', 'logout()')
+    log.info('PuppetService', 'logout()')
 
     if (!this.id) {
       throw new Error('logout before login?')

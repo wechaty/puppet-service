@@ -53,7 +53,7 @@ export class EventStreamManager {
   public start (
     stream: grpc.ServerWritableStream<EventRequest, EventResponse>,
   ): void {
-    log.verbose('EventStreamManager', 'start(stream)')
+    log.info('EventStreamManager', 'start(stream)')
 
     if (this.eventStream) {
       throw new Error('can not set twice')
@@ -78,7 +78,7 @@ export class EventStreamManager {
   }
 
   public stop (): void {
-    log.verbose('EventStreamManager', 'stop()')
+    log.info('EventStreamManager', 'stop()')
 
     if (!this.eventStream) {
       throw new Error('no this.eventStream')
@@ -92,7 +92,7 @@ export class EventStreamManager {
     type : EventTypeMap[keyof EventTypeMap],  // https://stackoverflow.com/a/49286056/1123955
     obj  : object,
   ): void {
-    log.verbose('EventStreamManager', 'grpcEmit(%s[%s], %s)',
+    log.info('EventStreamManager', 'grpcEmit(%s[%s], %s)',
       EventTypeRev[type],
       type,
       JSON.stringify(obj),
