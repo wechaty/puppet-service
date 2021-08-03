@@ -63,7 +63,8 @@
   "dependencies": {
     "rxjs": "^7.1.0",
     "stronger-typed-streams": "^0.2.0",
-    "wechaty-grpc": "^0.23.13"
+    "wechaty-grpc": "^0.25.1",
+    "wechaty-token": "^0.2.1"
   },
   "publishConfig": {
     "access": "public",
