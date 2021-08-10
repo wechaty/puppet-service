@@ -4,24 +4,19 @@ import {
   StatusBuilder,
   UntypedHandleCall,
   sendUnaryData,
+  Metadata,
   ServerUnaryCall,
   GrpcStatus,
   UntypedServiceImplementation,
 }                                 from './grpc-js'
 
+import { monkeyPatchMetadataFromHttp2Headers }  from './mokey-patch-header-authorization'
+
 /**
- * The following handlers using `cb` for errors
- * handleUnaryCall
- * handleClientStreamingCall
+ * Huan(202108): Monkey patch to support
+ *  copy `:authority` from header to metadata
  */
-// type ServiceHandlerCb = (call: ServerUnaryCall<any, any>, cb: sendUnaryData<any>) => void
-/**
- * The following handlers using `emit` for errors
- * handleServerStreamingCall
- * handleBidiStreamingCall
- */
-// type ServiceHandlerEmit = (call: ServerUnaryCall<any, any>) => void
-// type ServiceHandler = ServiceHandlerCb | ServiceHandlerEmit
+monkeyPatchMetadataFromHttp2Headers(Metadata)
 
 /**
  * Huan(202108): wrap handle calls with authorization
