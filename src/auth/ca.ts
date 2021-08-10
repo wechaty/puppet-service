@@ -85,7 +85,8 @@ EPV0eUNvPeO94cdmX/ZUgVEQ0WzleGYMwkHMFoh/KToR3Bw=
 
 /**
  * Environment variables containing newlines in Node?
- *  https://stackoverflow.com/a/36439803/1123955
+ *  `replace(/\\n/g, '\n')`
+ *    https://stackoverflow.com/a/36439803/1123955
  */
 const GET_WECHATY_PUPPET_SERVICE_SSL_ROOT_CERT = () => {
   return process.env['WECHATY_PUPPET_SERVICE_SSL_ROOT_CERT']
