@@ -147,6 +147,7 @@ const MAX_GRPC_CONNECTION_RETRIES = 5
 WechatyResolver.setup()
 
 export type PuppetServiceOptions = PuppetOptions & {
+  authority?   : string
   servername?  : string
   sslRootCert? : string
 }
@@ -191,7 +192,7 @@ export class PuppetService extends Puppet {
 
     this.token      = GET_WECHATY_PUPPET_SERVICE_TOKEN(options.token)
     this.endpoint   = GET_WECHATY_PUPPET_SERVICE_ENDPOINT(options.endpoint)
-      || `wechaty://${GET_WECHATY_PUPPET_SERVICE_AUTHORITY()}/${this.token}`
+      || `wechaty://${GET_WECHATY_PUPPET_SERVICE_AUTHORITY(options.authority)}/${this.token}`
 
     this.cleanCallbackList = []
   }
