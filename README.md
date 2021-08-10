@@ -63,14 +63,24 @@ Implemented SSL and server-side token authorization!
 
 For Puppet Server:
 
-1. `WECHATY_PUPPET_SERVICE_SSL_SERVER_CERT`: Server CA Cert (string data), will be replaced if `options.sslServerCert` has been set.
-1. `WECHATY_PUPPET_SERVICE_SSL_SERVER_KEY`: Server CA Key (string data), will be replaced if `optoins.sslServerKey` has been set.
+1. `WECHATY_PUPPET_SERVICE_SSL_SERVER_CERT`:
+  Server CA Cert (string data),
+  will be replaced if `options.sslServerCert` has been set.
+1. `WECHATY_PUPPET_SERVICE_SSL_SERVER_KEY`:
+  Server CA Key (string data),
+  will be replaced if `optoins.sslServerKey` has been set.
 
 For Puppet Client:
 
-1. `WECHATY_PUPPET_SERVICE_AUTHORITY`: `api.chatie.io` service discovery host name, will be replaced if `options.authority` has been set.
-1. `WECHATY_PUPPET_SERVICE_SSL_ROOT_CERT`: Root CA Cert (string data), will be replaced if `options.sslRootCert` has been set.
-1. `WECHATY_PUPPET_SERVICE_GRPC_SSL_TARGET_NAME_OVERRIDE`: Server Name (mast match for SNI), will be replaced if `optoins.servername` has been set.
+1. `WECHATY_PUPPET_SERVICE_AUTHORITY`:
+  `api.chatie.io` service discovery host name,
+  will be replaced if `options.authority` has been set.
+1. `WECHATY_PUPPET_SERVICE_SSL_ROOT_CERT`:
+  Root CA Cert (string data),
+  will be replaced if `options.sslRootCert` has been set.
+1. `WECHATY_PUPPET_SERVICE_GRPC_SSL_TARGET_NAME_OVERRIDE`:
+  Server Name (mast match for SNI),
+  will be replaced if `optoins.servername` has been set.
 
 #### Changelog
 
