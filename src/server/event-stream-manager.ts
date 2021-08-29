@@ -28,11 +28,11 @@ import {
 
 import {
   log,
-}                 from '../config'
+}                 from '../config.js'
 
 import {
   EventTypeRev,
-}                     from '../event-type-rev'
+}                     from '../event-type-rev.js'
 
 class EventStreamManager {
 

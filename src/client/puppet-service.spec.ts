@@ -2,7 +2,7 @@
 
 import { test }  from 'tstest'
 
-import { PuppetService } from './puppet-service'
+import { PuppetService } from './puppet-service.js'
 
 test('version()', async t => {
   const puppet = new PuppetService({

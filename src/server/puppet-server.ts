@@ -14,17 +14,17 @@ import {
   log,
   VERSION,
   GRPC_OPTIONS,
-}                     from '../config'
+}                     from '../config.js'
 
 import {
   puppetImplementation,
-}                         from './puppet-implementation'
+}                         from './puppet-implementation.js'
 import {
   authImplToken,
-}                         from '../auth/mod'
+}                         from '../auth/mod.js'
 import {
   TLS_INSECURE_SERVER_CERT, TLS_INSECURE_SERVER_KEY,
-}                             from '../auth/ca'
+}                             from '../auth/ca.js'
 
 export interface PuppetServerOptions {
   endpoint : string,

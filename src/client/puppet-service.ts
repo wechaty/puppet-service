@@ -104,21 +104,21 @@ import {
   envVars,
   log,
   VERSION,
-}                                         from '../config'
+}                                         from '../config.js'
 
 import {
   EventTypeRev,
-}                 from '../event-type-rev'
+}                 from '../event-type-rev.js'
 
 import {
   packConversationIdFileBoxToPb,
   unpackFileBoxFromPb,
-}                                   from '../file-box-stream/mod'
-import { serializeFileBox }         from '../server/serialize-file-box'
+}                                   from '../file-box-stream/mod.js'
+import { serializeFileBox }         from '../server/serialize-file-box.js'
 
-import { recover$ }     from './recover$'
-import { GrpcClient }   from './grpc-client'
-import { PayloadStore } from './payload-store'
+import { recover$ }     from './recover$.js'
+import { GrpcClient }   from './grpc-client.js'
+import { PayloadStore } from './payload-store.js'
 
 export type PuppetServiceOptions = PuppetOptions & {
   authority?  : string

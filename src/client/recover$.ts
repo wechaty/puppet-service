@@ -23,7 +23,7 @@ import {
 
 import {
   log,
-}           from '../config'
+}           from '../config.js'
 
 /**
  * Filters

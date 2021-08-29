@@ -9,9 +9,9 @@ import {
   GrpcStatus,
   Metadata,
   UntypedServiceImplementation,
-}                                   from './grpc-js'
+}                                   from './grpc-js.js'
 
-import { authImplToken } from './auth-impl-token'
+import { authImplToken } from './auth-impl-token.js'
 
 test('authImplToken()', async t => {
   const sandbox = sinon.createSandbox()

@@ -6,7 +6,7 @@ import {
   Transform,
 }                       from 'stronger-typed-streams'
 
-import { nextData } from './next-data'
+import { nextData } from './next-data.js'
 
 const decoder = () => new Transform<FileBoxChunk, any>({
   objectMode: true,

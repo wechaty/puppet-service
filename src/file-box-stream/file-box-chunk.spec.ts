@@ -32,8 +32,8 @@ import {
 import {
   unpackFileBoxFromChunk,
   packFileBoxToChunk,
-}                         from './file-box-chunk'
-import { nextData }       from './next-data'
+}                         from './file-box-chunk.js'
+import { nextData }       from './next-data.js'
 
 test('unpackFileBoxFromChunk()', async t => {
   const FILE_BOX_DATA = 'test'

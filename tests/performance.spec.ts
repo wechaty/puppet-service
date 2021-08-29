@@ -14,11 +14,6 @@ import {
 }             from 'tstest'
 
 import {
-  PuppetService,
-  PuppetServer,
-  PuppetServerOptions,
-}                               from '../src/mod'
-import {
   PuppetOptions,
   ContactPayload,
   log,
@@ -29,6 +24,12 @@ import {
 import {
   PuppetMock,
 }                         from 'wechaty-puppet-mock'
+
+import {
+  PuppetService,
+  PuppetServer,
+  PuppetServerOptions,
+}                               from '../src/mod.js'
 
 const idToName = (id: string) => {
   return `name of ${id}`

@@ -28,11 +28,11 @@ import { test }         from 'tstest'
 import { PassThrough }  from 'stream'
 import { FileBox }      from 'wechaty-puppet'
 
-import { nextData }     from './next-data'
+import { nextData }     from './next-data.js'
 import {
   packConversationIdFileBoxToPb,
   unpackConversationIdFileBoxArgsFromPb,
-}                                         from './conversation-id-file-box'
+}                                         from './conversation-id-file-box.js'
 
 test('unpackConversationIdFileBoxArgsFromPb()', async t => {
   const FILE_BOX_DATA = 'test'

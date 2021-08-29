@@ -19,16 +19,16 @@ import {
   GRPC_OPTIONS,
   log,
   envVars,
-}                   from '../config'
+}                   from '../config.js'
 
-import { callCredToken }  from '../auth/mod'
-import { GrpcStatus }     from '../auth/grpc-js'
+import { callCredToken }  from '../auth/mod.js'
+import { GrpcStatus }     from '../auth/grpc-js.js'
 import {
   TLS_CA_CERT,
   TLS_INSECURE_SERVER_CERT_COMMON_NAME,
-}                                         from '../auth/ca'
+}                                         from '../auth/ca.js'
 
-import { PuppetServiceOptions } from './puppet-service'
+import { PuppetServiceOptions } from './puppet-service.js'
 
 /**
  * Huan(202108): register `wechaty` schema for gRPC service discovery

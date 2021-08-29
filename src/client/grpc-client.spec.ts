@@ -2,7 +2,7 @@
 
 import { test }  from 'tstest'
 
-import { GrpcClient } from './grpc-client'
+import { GrpcClient } from './grpc-client.js'
 
 /**
  * Huan(202108):

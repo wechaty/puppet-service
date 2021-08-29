@@ -80,15 +80,15 @@ import {
 import {
   packFileBoxToPb,
   unpackConversationIdFileBoxArgsFromPb,
-}                                         from '../file-box-stream/mod'
+}                                         from '../file-box-stream/mod.js'
 
 import {
   log,
-}           from '../config'
+}           from '../config.js'
 
-import { grpcError }          from './grpc-error'
-import { EventStreamManager } from './event-stream-manager'
-import { serializeFileBox }   from './serialize-file-box'
+import { grpcError }          from './grpc-error.js'
+import { EventStreamManager } from './event-stream-manager.js'
+import { serializeFileBox }   from './serialize-file-box.js'
 
 function puppetImplementation (
   puppet: Puppet,

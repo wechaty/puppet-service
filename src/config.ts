@@ -2,10 +2,12 @@
 
 import { log }  from 'wechaty-puppet'
 
-import { VERSION } from './version'
+import { packageJson } from './package-json.js'
 
-import * as rootEnvVars from './env-vars'
-import * as authEnvVars from './auth/env-vars'
+import * as rootEnvVars from './env-vars.js'
+import * as authEnvVars from './auth/env-vars.js'
+
+const VERSION = packageJson.version || '0.0.0'
 
 const envVars = {
   ...rootEnvVars,

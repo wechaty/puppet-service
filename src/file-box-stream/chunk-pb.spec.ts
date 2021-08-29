@@ -15,11 +15,11 @@ import {
 import {
   unpackFileBoxFromChunk,
   packFileBoxToChunk,
-}                             from './file-box-chunk'
+}                             from './file-box-chunk.js'
 import {
   unpackFileBoxChunkFromPb,
   packFileBoxChunkToPb,
-}                             from './chunk-pb'
+}                             from './chunk-pb.js'
 
 test('packFileBoxChunk()', async t => {
   const FILE_BOX_DATA = 'test'

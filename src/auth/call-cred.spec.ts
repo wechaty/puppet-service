@@ -5,7 +5,7 @@ import {
   sinon,
 }         from 'tstest'
 
-import { metaGeneratorToken } from './call-cred'
+import { metaGeneratorToken } from './call-cred.js'
 
 test('metaGeneratorToken()', async t => {
   const TOKEN = 'UUIDv4'

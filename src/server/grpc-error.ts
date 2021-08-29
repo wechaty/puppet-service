@@ -2,7 +2,7 @@ import { grpc } from 'wechaty-grpc'
 
 import {
   log,
-}         from '../config'
+}         from '../config.js'
 
 export function grpcError (
   method   : string,

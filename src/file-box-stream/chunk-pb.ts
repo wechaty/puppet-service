@@ -2,7 +2,7 @@ import { FileBoxChunk } from 'wechaty-grpc'
 import { Readable, Transform } from 'stronger-typed-streams'
 import { PassThrough } from 'stream'
 
-import { FileBoxPb } from './file-box-pb.type'
+import { FileBoxPb } from './file-box-pb.type.js'
 
 /**
  * Wrap FileBoxChunk

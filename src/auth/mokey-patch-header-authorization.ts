@@ -1,10 +1,10 @@
 import http2 from 'http2'
 
-import { log } from '../config'
+import { log } from '../config.js'
 
 import {
   Metadata,
-}             from './grpc-js'
+}             from './grpc-js.js'
 
 /**
  * Huan(202108): This is for compatible with old clients (version v0.26 or before)

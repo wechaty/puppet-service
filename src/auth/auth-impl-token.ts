@@ -1,4 +1,4 @@
-import { log } from '../config'
+import { log } from '../config.js'
 
 import {
   StatusBuilder,
@@ -8,9 +8,9 @@ import {
   ServerUnaryCall,
   GrpcStatus,
   UntypedServiceImplementation,
-}                                 from './grpc-js'
+}                                 from './grpc-js.js'
 
-import { monkeyPatchMetadataFromHttp2Headers }  from './mokey-patch-header-authorization'
+import { monkeyPatchMetadataFromHttp2Headers }  from './mokey-patch-header-authorization.js'
 
 /**
  * Huan(202108): Monkey patch to support

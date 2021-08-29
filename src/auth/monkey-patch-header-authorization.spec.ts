@@ -5,9 +5,9 @@ import http2 from 'http2'
 
 import {
   Metadata,
-}             from './grpc-js'
+}             from './grpc-js.js'
 
-import { monkeyPatchMetadataFromHttp2Headers } from './mokey-patch-header-authorization'
+import { monkeyPatchMetadataFromHttp2Headers } from './mokey-patch-header-authorization.js'
 
 test('monkeyPatchMetadataFromHttp2Headers', async t => {
   const AUTHORITY = '__authority__'

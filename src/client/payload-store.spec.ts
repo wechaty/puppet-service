@@ -2,7 +2,7 @@
 
 import { test }  from 'tstest'
 
-import { PayloadStore } from './payload-store'
+import { PayloadStore } from './payload-store.js'
 
 test('PayloadStore perfect restart', async t => {
   const token = Math.random().toString(36)

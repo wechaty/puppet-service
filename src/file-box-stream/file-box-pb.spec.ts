@@ -11,7 +11,7 @@ import {
 import {
   packFileBoxToPb,
   unpackFileBoxFromPb,
-}                             from './file-box-pb'
+}                             from './file-box-pb.js'
 
 test('packFileBoxToPb()', async t => {
   const FILE_BOX_DATA = 'test'

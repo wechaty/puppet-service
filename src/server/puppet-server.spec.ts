@@ -7,7 +7,7 @@ import { Puppet } from 'wechaty-puppet'
 import {
   PuppetServer,
   PuppetServerOptions,
-}                          from './puppet-server'
+}                          from './puppet-server.js'
 
 test('version()', async t => {
   const options: PuppetServerOptions = {

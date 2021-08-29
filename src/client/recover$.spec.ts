@@ -10,7 +10,7 @@ import { test }  from 'tstest'
 
 import {
   switchSuccess,
-}                     from './recover$'
+}                     from './recover$.js'
 
 test('switchSuccess()', async t => {
   t.equal(switchSuccess(true), true, 'should get expected result for boolean `true`')
