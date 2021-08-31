@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node --no-warnings --loader ts-node/esm
 
 import { test } from 'tstest'
 
@@ -7,9 +7,7 @@ import { PassThrough } from 'stream'
 import { FileBox } from 'wechaty-puppet'
 
 import {
-  FileBoxChunk,
-  MessageFileStreamResponse,
-  MessageSendFileStreamRequest,
+  puppet,
 }                                 from 'wechaty-grpc'
 
 import {
@@ -31,11 +29,11 @@ test('packFileBoxChunk()', async t => {
   )
 
   const chunkStream = await packFileBoxToChunk(fileBox)
-  const pbStream    = await packFileBoxChunkToPb(MessageFileStreamResponse)(chunkStream)
+  const pbStream    = await packFileBoxChunkToPb(puppet.MessageFileStreamResponse)(chunkStream)
 
   let   name        = ''
   let   buffer      = ''
-  pbStream.on('data', (data: MessageFileStreamResponse) => {
+  pbStream.on('data', (data: puppet.MessageFileStreamResponse) => {
     if (data.hasFileBoxChunk()) {
       const fileBoxChunk = data.getFileBoxChunk()
       if (fileBoxChunk!.hasData()) {
@@ -62,11 +60,11 @@ test('unpackFileBoxChunkFromPb()', async t => {
   )
 
   const chunkStream = await packFileBoxToChunk(fileBox)
-  const request = new MessageSendFileStreamRequest()
+  const request = new puppet.MessageSendFileStreamRequest()
 
   const packedStream = new PassThrough({ objectMode: true })
 
-  chunkStream.on('data', (data: FileBoxChunk) => {
+  chunkStream.on('data', (data: puppet.FileBoxChunk) => {
     request.setFileBoxChunk(data)
     packedStream.write(request)
   }).on('end', () => {
@@ -89,7 +87,7 @@ test('packFileBoxChunk() <-> unpackFileBoxChunkFromPb()', async t => {
   )
 
   const chunkStream = await packFileBoxToChunk(fileBox)
-  const packedStream = packFileBoxChunkToPb(MessageFileStreamResponse)(chunkStream)
+  const packedStream = packFileBoxChunkToPb(puppet.MessageFileStreamResponse)(chunkStream)
 
   const unpackedStream = unpackFileBoxChunkFromPb(packedStream)
   const restoredBox = await unpackFileBoxFromChunk(unpackedStream)
@@ -107,7 +105,7 @@ test('packFileBoxChunk(): should not throw if no read on the stream', async t =>
   const stream = await getTestChunkStream({})
   let outStream
   try {
-    outStream = packFileBoxChunkToPb(MessageFileStreamResponse)(stream)
+    outStream = packFileBoxChunkToPb(puppet.MessageFileStreamResponse)(stream)
   } catch (e) {
     t.ok(e.message)
     return
@@ -120,7 +118,7 @@ test('packFileBoxChunk(): should emit error in the output stream', async t => {
   const EXPECTED_MESSAGE = 'test emit error'
 
   const stream = await getTestChunkStream({ errorMessage: EXPECTED_MESSAGE })
-  const outStream = packFileBoxChunkToPb(MessageFileStreamResponse)(stream)
+  const outStream = packFileBoxChunkToPb(puppet.MessageFileStreamResponse)(stream)
 
   const error = await new Promise<Error>(resolve => outStream.on('error', resolve))
   // await new Promise(resolve => outStream.on('end', resolve))
@@ -147,7 +145,7 @@ test('unpackFileBoxChunkFromPb(): should emit error in the output stream', async
   const errorMessage = 'test emit error'
   const stream = await getTestPackedStream({ errorMessage })
 
-  const outStream = packFileBoxChunkToPb(MessageFileStreamResponse)(stream)
+  const outStream = packFileBoxChunkToPb(puppet.MessageFileStreamResponse)(stream)
 
   try {
     await new Promise((resolve, reject) => {
@@ -197,7 +195,7 @@ async function getTestPackedStream (options: {
   const chunkStream = await packFileBoxToChunk(fileBox)
   const packedStream = new PassThrough({ objectMode: true })
   chunkStream.on('data', d => {
-    const packedChunk = new MessageFileStreamResponse()
+    const packedChunk = new puppet.MessageFileStreamResponse()
     packedChunk.setFileBoxChunk(d)
     packedStream.write(packedChunk)
   }).on('error', e => {
