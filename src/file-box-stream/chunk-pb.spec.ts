@@ -107,7 +107,7 @@ test('packFileBoxChunk(): should not throw if no read on the stream', async t =>
   try {
     outStream = packFileBoxChunkToPb(puppet.MessageFileStreamResponse)(stream)
   } catch (e) {
-    t.ok(e.message)
+    t.ok((e as Error).message)
     return
   }
   outStream.on('error', _ => { /* Do nothing */ })
@@ -134,7 +134,7 @@ test('unpackFileBoxChunkFromPb(): should not throw if no read on the stream', as
     outStream = unpackFileBoxChunkFromPb(stream)
     t.pass('should no rejection')
   } catch (e) {
-    t.fail(e.message)
+    t.fail((e as Error).message)
     return
   }
   outStream.on('error', _ => { /* Do nothing */ })
@@ -154,7 +154,7 @@ test('unpackFileBoxChunkFromPb(): should emit error in the output stream', async
     })
     t.fail('should reject the promise')
   } catch (e) {
-    t.equal(e.message, errorMessage, 'should get the expected rejection error message')
+    t.equal((e as Error).message, errorMessage, 'should get the expected rejection error message')
   }
 })
 

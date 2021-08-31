@@ -1,4 +1,4 @@
-import { log } from './config.js'
+import { log } from 'wechaty-puppet'
 
 // Huan(202011): use a function to return the value in time.
 const WECHATY_PUPPET_SERVICE_TOKEN: (token?: string) => string = token => {

@@ -2,16 +2,15 @@ import util from 'util'
 
 import {
   Puppet,
+  log,
 }                 from 'wechaty-puppet'
-
 import {
   grpc,
-  PuppetService,
-}                     from 'wechaty-grpc'
+  puppet as grpcPuppet,
+}                       from 'wechaty-grpc'
 
 import {
   envVars,
-  log,
   VERSION,
   GRPC_OPTIONS,
 }                     from '../config.js'
@@ -70,7 +69,7 @@ export class PuppetServer {
 
     this.grpcServer = new grpc.Server(GRPC_OPTIONS)
     this.grpcServer.addService(
-      PuppetService,
+      grpcPuppet.PuppetService,
       puppetImplAuth,
     )
 

@@ -1,4 +1,4 @@
-import { log } from '../config.js'
+import { log } from 'wechaty-puppet'
 
 import {
   StatusBuilder,

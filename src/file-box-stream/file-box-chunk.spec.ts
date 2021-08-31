@@ -27,7 +27,7 @@ import { FileBox }      from 'wechaty-puppet'
 
 import {
   puppet,
-}                 from '../wechaty-grpc.js'
+}                 from 'wechaty-grpc'
 
 import {
   unpackFileBoxFromChunk,
@@ -105,7 +105,7 @@ test('should handle no name error in catch', async t => {
   try {
     await unpackFileBoxFromChunk(stream)
   } catch (e) {
-    t.equal(e.message, 'no name')
+    t.equal((e as Error).message, 'no name')
   }
 })
 
@@ -119,7 +119,7 @@ test('should handle first error catch', async t => {
   try {
     await unpackFileBoxFromChunk(stream)
   } catch (e) {
-    t.equal(e.message, 'first exception')
+    t.equal((e as Error).message, 'first exception')
   }
 })
 
@@ -134,7 +134,7 @@ test('should handle middle error in further ops', async t => {
   try {
     await fileBox.toBuffer()
   } catch (e) {
-    t.equal(e.message, 'middle exception')
+    t.equal((e as Error).message, 'middle exception')
   }
 })
 

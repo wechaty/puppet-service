@@ -1,6 +1,6 @@
 import http2 from 'http2'
 
-import { log } from '../config.js'
+import { log } from 'wechaty-puppet'
 
 import {
   Metadata,

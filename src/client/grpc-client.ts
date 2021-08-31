@@ -2,13 +2,9 @@ import util from 'util'
 import EventEmitter from 'events'
 import crypto from 'crypto'
 
+import { log } from 'wechaty-puppet'
 import {
   grpc,
-  // PuppetClient,
-  // EventRequest,
-  // StartRequest,
-  // StopRequest,
-  // EventResponse,
   puppet,
 }                     from 'wechaty-grpc'
 import {
@@ -18,7 +14,6 @@ import {
 
 import {
   GRPC_OPTIONS,
-  log,
   envVars,
 }                   from '../config.js'
 
@@ -227,7 +222,7 @@ class GrpcClient extends EventEmitter {
     try {
       client.close()
     } catch (e) {
-      log.error('GrpcClient', 'destroy() grpcClient.close() rejection: %s\n%s', e && e.message, e.stack)
+      log.error('GrpcClient', 'destroy() grpcClient.close() rejection: %s\n%s', e && (e as Error).message, (e as Error).stack)
     }
   }
 

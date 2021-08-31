@@ -25,6 +25,6 @@ test.skip('PuppetService restart without problem', async t => {
     }
     t.pass('PuppetService() start/restart successed.')
   } catch (e) {
-    t.fail(e)
+    t.fail(e as any)
   }
 })

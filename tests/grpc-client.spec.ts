@@ -1,10 +1,11 @@
 #!/usr/bin/env node --no-warnings --loader ts-node/esm
 
 import { test }  from 'tstest'
-import { PuppetOptions } from 'wechaty-puppet'
+import {
+  PuppetOptions,
+  log,
+}                 from 'wechaty-puppet'
 import PuppetMock from 'wechaty-puppet-mock'
-
-import { log } from '../src/config.js'
 
 import { GrpcClient }   from '../src/client/grpc-client.js'
 import {
