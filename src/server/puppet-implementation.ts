@@ -11,6 +11,7 @@ import {
   Puppet,
 
   FriendshipPayloadReceive,
+  LocationPayload,
   MiniProgramPayload,
   UrlLinkPayload,
   RoomInvitationPayload,
@@ -623,6 +624,24 @@ function puppetImplementation (
       }
     },
 
+    messageLocation: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageLocation()')
+
+      try {
+        const id = call.request.getId()
+
+        const payload = await puppet.messageLocation(id)
+
+        const response = new pbPuppet.MessageLocationResponse()
+        response.setLocation(JSON.stringify(payload))
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageLocation', (e as Error), callback)
+      }
+    },
+
     messagePayload: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messagePayload()')
 
@@ -769,6 +788,32 @@ function puppetImplementation (
 
       } catch (e) {
         return grpcError('messageSendMiniProgram', (e as Error), callback)
+      }
+    },
+
+    messageSendLocation: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageSendLocation()')
+
+      try {
+        const conversationId = call.request.getConversationId()
+        const jsonText = call.request.getLocation()
+
+        const payload = JSON.parse(jsonText) as LocationPayload
+
+        const messageId = await puppet.messageSendLocation(conversationId, payload)
+
+        const response = new pbPuppet.MessageSendLocationResponse()
+
+        if (messageId) {
+          const idWrapper = new StringValue()
+          idWrapper.setValue(messageId)
+          response.setId(idWrapper)
+        }
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageSendLocation', (e as Error), callback)
       }
     },
 

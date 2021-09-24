@@ -37,6 +37,7 @@ import {
   RoomMemberPayload,
   RoomPayload,
   UrlLinkPayload,
+  LocationPayload,
   throwUnsupportedError,
 }                         from 'wechaty-puppet'
 
@@ -692,6 +693,24 @@ export class PuppetService extends Puppet {
     return payload
   }
 
+  override async messageLocation (
+    messageId: string,
+  ): Promise<LocationPayload> {
+    log.verbose('PuppetService', 'messageLocation(%s)', messageId)
+
+    const request = new pbPuppet.MessageLocationRequest()
+    request.setId(messageId)
+
+    const response = await util.promisify(
+      this.grpc!.client!.messageLocation.bind(this.grpc!.client!)
+    )(request)
+
+    const jsonText = response.getLocation()
+    const payload = JSON.parse(jsonText) as LocationPayload
+
+    return payload
+  }
+
   override async messageImage (
     messageId: string,
     imageType: ImageType,
@@ -744,6 +763,27 @@ export class PuppetService extends Puppet {
 
     const response = await util.promisify(
       this.grpc!.client!.messageSendMiniProgram.bind(this.grpc!.client!)
+    )(request)
+
+    const messageIdWrapper = response.getId()
+
+    if (messageIdWrapper) {
+      return messageIdWrapper.getValue()
+    }
+  }
+
+  override async messageSendLocation (
+    conversationId: string,
+    locationPayload: LocationPayload,
+  ): Promise<void | string> {
+    log.verbose('PuppetService', 'messageSendLocation(%s)', conversationId, JSON.stringify(locationPayload))
+
+    const request = new pbPuppet.MessageSendLocationRequest()
+    request.setConversationId(conversationId)
+    request.setLocation(JSON.stringify(locationPayload))
+
+    const response = await util.promisify(
+      this.grpc!.client!.messageSendLocation.bind(this.grpc!.client!)
     )(request)
 
     const messageIdWrapper = response.getId()
