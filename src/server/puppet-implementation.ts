@@ -606,24 +606,6 @@ function puppetImplementation (
       }
     },
 
-    messageMiniProgram: async (call, callback) => {
-      log.verbose('PuppetServiceImpl', 'messageMiniProgram()')
-
-      try {
-        const id = call.request.getId()
-
-        const payload = await puppet.messageMiniProgram(id)
-
-        const response = new pbPuppet.MessageMiniProgramResponse()
-        response.setMiniProgram(JSON.stringify(payload))
-
-        return callback(null, response)
-
-      } catch (e) {
-        return grpcError('messageMiniProgram', (e as Error), callback)
-      }
-    },
-
     messageLocation: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageLocation()')
 
@@ -639,6 +621,24 @@ function puppetImplementation (
 
       } catch (e) {
         return grpcError('messageLocation', (e as Error), callback)
+      }
+    },
+
+    messageMiniProgram: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageMiniProgram()')
+
+      try {
+        const id = call.request.getId()
+
+        const payload = await puppet.messageMiniProgram(id)
+
+        const response = new pbPuppet.MessageMiniProgramResponse()
+        response.setMiniProgram(JSON.stringify(payload))
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageMiniProgram', (e as Error), callback)
       }
     },
 
@@ -765,32 +765,6 @@ function puppetImplementation (
       }
     },
 
-    messageSendMiniProgram: async (call, callback) => {
-      log.verbose('PuppetServiceImpl', 'messageSendMiniProgram()')
-
-      try {
-        const conversationId = call.request.getConversationId()
-        const jsonText = call.request.getMiniProgram()
-
-        const payload = JSON.parse(jsonText) as MiniProgramPayload
-
-        const messageId = await puppet.messageSendMiniProgram(conversationId, payload)
-
-        const response = new pbPuppet.MessageSendMiniProgramResponse()
-
-        if (messageId) {
-          const idWrapper = new StringValue()
-          idWrapper.setValue(messageId)
-          response.setId(idWrapper)
-        }
-
-        return callback(null, response)
-
-      } catch (e) {
-        return grpcError('messageSendMiniProgram', (e as Error), callback)
-      }
-    },
-
     messageSendLocation: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageSendLocation()')
 
@@ -814,6 +788,32 @@ function puppetImplementation (
 
       } catch (e) {
         return grpcError('messageSendLocation', (e as Error), callback)
+      }
+    },
+
+    messageSendMiniProgram: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageSendMiniProgram()')
+
+      try {
+        const conversationId = call.request.getConversationId()
+        const jsonText = call.request.getMiniProgram()
+
+        const payload = JSON.parse(jsonText) as MiniProgramPayload
+
+        const messageId = await puppet.messageSendMiniProgram(conversationId, payload)
+
+        const response = new pbPuppet.MessageSendMiniProgramResponse()
+
+        if (messageId) {
+          const idWrapper = new StringValue()
+          idWrapper.setValue(messageId)
+          response.setId(idWrapper)
+        }
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageSendMiniProgram', (e as Error), callback)
       }
     },
 
