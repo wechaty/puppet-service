@@ -606,7 +606,9 @@ export class PuppetService extends Puppet {
     if (fileBox) {
       const request = new pbPuppet.ContactAvatarRequest()
       request.setId(contactId)
-      request.setFileBox(await this.serializeFileBox(fileBox))
+
+      const serializedFileBox = await this.serializeFileBox(fileBox)
+      request.setFileBox(serializedFileBox)
 
       {
         // DEPRECATED, will be removed after Dec 31, 2022
