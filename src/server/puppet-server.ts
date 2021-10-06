@@ -7,9 +7,6 @@ import {
   grpc,
   puppet as grpcPuppet,
 }                       from 'wechaty-grpc'
-import type {
-  FileBox,
-}                       from 'file-box'
 
 import {
   envVars,
