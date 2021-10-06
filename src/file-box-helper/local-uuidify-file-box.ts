@@ -6,10 +6,6 @@ import {
   Constructor,
 }                         from 'clone-class'
 
-import {
-  uuidLoaderLocal,
-  uuidSaverLocal,
-}                   from './local-uuid-helper.js'
 import type { UuidFileManager } from './uuid-file-manager.js'
 
 type UuidifyFileBoxLocalFactory = (uuidFileManager: UuidFileManager) => typeof FileBox
@@ -25,8 +21,8 @@ const uuidifyFileBoxLocal: UuidifyFileBoxLocalFactory = (
    */
   const FileBoxUuid: typeof FileBox = cloneClass(FileBox as any as Constructor<FileBox>) as any
 
-  FileBoxUuid.setUuidLoader(uuidLoaderLocal(uuidFileManager))
-  FileBoxUuid.setUuidSaver(uuidSaverLocal(uuidFileManager))
+  FileBoxUuid.setUuidLoader(uuid  => uuidFileManager.load(uuid))
+  FileBoxUuid.setUuidSaver(stream => uuidFileManager.save(stream))
 
   return FileBoxUuid
 }

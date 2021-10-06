@@ -10,10 +10,6 @@ import {
   uuidifyFileBoxGrpc,
 }                         from './grpc-uuidify-file-box.js'
 import {
-  uuidLoaderLocal,
-  uuidSaverLocal,
-}                         from './local-uuid-helper.js'
-import {
   normalizeFileBoxUuid,
 }                         from './normalize-filebox.js'
 import {
@@ -27,7 +23,5 @@ export {
   randomUuid,
   uuidifyFileBoxGrpc,
   uuidLoaderGrpc,
-  uuidLoaderLocal,
   uuidSaverGrpc,
-  uuidSaverLocal,
 }
