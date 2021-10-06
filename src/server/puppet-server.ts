@@ -53,7 +53,6 @@ export class PuppetServer {
 
   protected grpcServer?      : grpc.Server
   protected uuidFileManager? : UuidFileManager
-  protected FileBox?         : typeof FileBox
 
   constructor (
     public readonly options: PuppetServerOptions,
@@ -84,6 +83,9 @@ export class PuppetServer {
 
     this.grpcServer = new grpc.Server(GRPC_OPTIONS)
 
+    /**
+     * Connect FileBox with UUID Manager
+     */
     const FileBoxUuid = uuidifyFileBoxLocal(this.uuidFileManager)
 
     const puppetImpl = puppetImplementation(

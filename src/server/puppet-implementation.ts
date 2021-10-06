@@ -516,10 +516,11 @@ function puppetImplementation (
       try {
         const id = call.request.getId()
 
-        const fileBox = await puppet.messageFile(id)
+        const fileBox           = await puppet.messageFile(id)
+        const serializedFileBox = await serializeFileBox(fileBox)
 
         const response = new pbPuppet.MessageFileResponse()
-        response.setFileBox(await serializeFileBox(fileBox))
+        response.setFileBox(serializedFileBox)
 
         return callback(null, response)
 

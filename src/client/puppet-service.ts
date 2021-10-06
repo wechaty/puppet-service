@@ -48,15 +48,6 @@ import {
 
 import type { Subscription } from 'rxjs'
 
-import {
-  envVars,
-  VERSION,
-}                                         from '../config.js'
-
-import {
-  EventTypeRev,
-}                 from '../event-type-rev.js'
-
 /**
  * Deprecated. Will be removed after Dec 31, 2022
  */
@@ -67,13 +58,24 @@ import {
 import { serializeFileBox }           from '../deprecated/serialize-file-box.js'
 
 import { millisecondsFromTimestamp }  from '../pure-functions/timestamp.js'
-import { uuidifyFileBoxGrpc }             from '../file-box-helper/grpc-uuidify-file-box.js'
+
+import {
+  uuidifyFileBoxGrpc,
+  normalizeFileBoxUuid,
+}                       from '../file-box-helper/mod.js'
+
+import {
+  envVars,
+  VERSION,
+}                       from '../config.js'
+import {
+  EventTypeRev,
+}                       from '../event-type-rev.js'
+import { packageJson }  from '../package-json.js'
 
 import { recover$ }     from './recover$.js'
 import { GrpcClient }   from './grpc-client.js'
 import { PayloadStore } from './payload-store.js'
-import { packageJson }  from '../package-json.js'
-import { normalizeFileBoxUuid } from '../file-box-helper/normalize-filebox.js'
 
 const { StringValue } = google
 
