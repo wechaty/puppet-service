@@ -141,7 +141,7 @@ function puppetImplementation (
       try {
         const fileBox = await puppet.contactAvatar(id)
         const response = new pbPuppet.ContactAvatarResponse()
-        response.setFilebox(JSON.stringify(fileBox))
+        response.setFileBox(JSON.stringify(fileBox))
 
         return callback(null, response)
       } catch (e) {

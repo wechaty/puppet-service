@@ -1,9 +1,6 @@
 import {
   FileBox,
 }                         from 'file-box'
-import type {
-  puppet as pbPuppet,
-}                         from 'wechaty-grpc'
 import {
   cloneClass,
   Constructor,
