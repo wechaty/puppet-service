@@ -174,7 +174,7 @@ class UuidFileManager {
     }
   }
 
-  protected destroy () {
+  destroy () {
     log.verbose('UuidFileManager', 'destroy() %s UUIDs left', this.uuidTimerMap.size)
 
     /**

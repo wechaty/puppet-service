@@ -1140,7 +1140,12 @@ export class PuppetService extends Puppet {
       log.verbose('PuppetService', 'messageSendFile() rejection: %s', (e as Error).message)
     }
 
-    // Deprecated. Will be removed after Dec 31, 2022
+    /**
+     * Huan(202110): Deprecated: will be removed after Dec 31, 2022
+     *  The old server will not support `Upload` gRPC method,
+     *  which I'm expecting the above code will throw a exception,
+     *  then the below code will be executed.
+     */
     return this.messageSendFileStream(conversationId, fileBox)
   }
 

@@ -3,11 +3,12 @@ import {
   google,
   grpc,
   puppet as pbPuppet,
-}                     from 'wechaty-grpc'
-
+}                               from 'wechaty-grpc'
+import type {
+  FileBox,
+}                               from 'file-box'
 import {
   log,
-  FileBox,
 
   Puppet,
 
@@ -22,13 +23,12 @@ import {
   EventScanPayload,
   EventReadyPayload,
   PayloadType,
-}                                   from 'wechaty-puppet'
+}                               from 'wechaty-puppet'
 
 import {
   packFileBoxToPb,
   unpackConversationIdFileBoxArgsFromPb,
 }                                         from '../deprecated/mod.js'
-import { serializeFileBox }               from '../deprecated/serialize-file-box.js'
 
 import {
   timestampFromMilliseconds,
@@ -36,7 +36,7 @@ import {
 import {
   chunkDecoder,
   chunkEncoder,
-  randomUuid,
+  normalizeFileBoxUuid,
 }                             from '../file-box-helper/mod.js'
 
 import { grpcError }          from './grpc-error.js'
@@ -46,7 +46,8 @@ import { EventStreamManager } from './event-stream-manager.js'
 const { StringValue } = google
 
 function puppetImplementation (
-  puppet: Puppet,
+  puppet      : Puppet,
+  FileBoxUuid : typeof FileBox,
 ): pbPuppet.IPuppetServer {
 
   /**
@@ -70,11 +71,24 @@ function puppetImplementation (
     .on('login', _       => {
       scanPayload = undefined
       readyTimeout = setTimeout(() => {
+        // Huan(202110): should we emit ready event here?
         readyPayload && eventStreamManager.grpcEmit(pbPuppet.EventType.EVENT_TYPE_READY, readyPayload)
       }, 5 * 1000)
     })
 
   const eventStreamManager = new EventStreamManager(puppet)
+
+  const serializeFileBox = async (fileBox: FileBox) => {
+    /**
+     * 1. if the fileBox is one of type `Url`, `QRCode`, `Uuid`, etc,
+     *  then it can be serialized by `fileBox.toString()`
+     * 2. if the fileBox is one of type `Stream`, `Buffer`, `File`, etc,
+     *  then it need to be convert to type `Uuid`
+     *  before serialized by `fileBox.toString()`
+     */
+    const normalizedFileBox = await normalizeFileBoxUuid(FileBoxUuid)(fileBox)
+    return JSON.stringify(normalizedFileBox)
+  }
 
   const puppetServerImpl: pbPuppet.IPuppetServer = {
 
@@ -122,9 +136,7 @@ function puppetImplementation (
       try {
         if (call.request.hasFileBox()) {
 
-          // TODO: use a uuidified FileBox here
-          const fileBox = FileBox.fromJSON(
-
+          const fileBox = FileBoxUuid.fromJSON(
             call.request.getFileBox(),
           )
           await puppet.contactAvatar(id, fileBox)
@@ -139,9 +151,11 @@ function puppetImplementation (
        * Get
        */
       try {
-        const fileBox = await puppet.contactAvatar(id)
-        const response = new pbPuppet.ContactAvatarResponse()
-        response.setFileBox(JSON.stringify(fileBox))
+        const fileBox           = await puppet.contactAvatar(id)
+        const serializedFileBox = await serializeFileBox(fileBox)
+
+        const response  = new pbPuppet.ContactAvatarResponse()
+        response.setFileBox(serializedFileBox)
 
         return callback(null, response)
       } catch (e) {
@@ -496,10 +510,6 @@ function puppetImplementation (
       }
     },
 
-    /**
-     * @deprecated: should not use this API because it will be changed to
-     *  `messageFileStream` after Dec 31, 2021
-     */
     messageFile: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageFile()')
 
@@ -518,6 +528,9 @@ function puppetImplementation (
       }
     },
 
+    /**
+     * @deprecated will be removed after Dec 31, 2022
+     */
     messageFileStream: async (call) => {
       log.verbose('PuppetServiceImpl', 'messageFileStream()')
 
@@ -565,21 +578,18 @@ function puppetImplementation (
       }
     },
 
-    /**
-     * @deprecated: should not use this API because it will be changed to
-     *  `messageFileStream` after Dec 31, 2021
-     */
     messageImage: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageImage()')
 
       try {
-        const id = call.request.getId()
-        const type = call.request.getType()
+        const id    = call.request.getId()
+        const type  = call.request.getType()
 
-        const fileBox = await puppet.messageImage(id, type as number as ImageType)
+        const fileBox           = await puppet.messageImage(id, type)
+        const serializedFileBox = await serializeFileBox(fileBox)
 
         const response = new pbPuppet.MessageImageResponse()
-        response.setFileBox(await serializeFileBox(fileBox))
+        response.setFileBox(serializedFileBox)
 
         return callback(null, response)
 
@@ -588,12 +598,15 @@ function puppetImplementation (
       }
     },
 
+    /**
+     * @deprecated will be removed after Dec 31, 2022
+     */
     messageImageStream: async (call) => {
       log.verbose('PuppetServiceImpl', 'messageImageStream()')
 
       try {
-        const id = call.request.getId()
-        const type = call.request.getType()
+        const id    = call.request.getId()
+        const type  = call.request.getType()
 
         const fileBox  = await puppet.messageImage(id, type as number as ImageType)
         const response = await packFileBoxToPb(pbPuppet.MessageImageStreamResponse)(fileBox)
@@ -750,10 +763,10 @@ function puppetImplementation (
       log.verbose('PuppetServiceImpl', 'messageSendFile()')
 
       try {
-        const conversationId = call.request.getConversationId()
-        const jsonText = call.request.getFileBox()
+        const conversationId  = call.request.getConversationId()
+        const jsonText        = call.request.getFileBox()
 
-        const fileBox = FileBox.fromJSON(jsonText)
+        const fileBox = FileBoxUuid.fromJSON(jsonText)
 
         const messageId = await puppet.messageSendFile(conversationId, fileBox)
 
@@ -778,6 +791,9 @@ function puppetImplementation (
       }
     },
 
+    /**
+     * @deprecated will be removed after Dec 31, 2022
+     */
     messageSendFileStream: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messageSendFileStream()')
 
@@ -1030,10 +1046,11 @@ function puppetImplementation (
       try {
         const roomId = call.request.getId()
 
-        const fileBox = await puppet.roomAvatar(roomId)
+        const fileBox           = await puppet.roomAvatar(roomId)
+        const serializedFileBox = await serializeFileBox(fileBox)
 
         const response = new pbPuppet.RoomAvatarResponse()
-        response.setFileBox(await serializeFileBox(fileBox))
+        response.setFileBox(serializedFileBox)
 
         return callback(null, response)
 
@@ -1458,8 +1475,8 @@ function puppetImplementation (
     download: async (call) => {
       log.verbose('PuppetServiceImpl', 'download()')
 
-      const id      = call.request.getId()
-      const fileBox = FileBox.fromQRCode(id)
+      const uuid    = call.request.getId()
+      const fileBox = FileBoxUuid.fromUuid(uuid, 'uuid.dat')
 
       fileBox
         .pipe(chunkEncoder(pbPuppet.DownloadResponse))
@@ -1469,14 +1486,12 @@ function puppetImplementation (
     upload: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'upload()')
 
-      const uuid = randomUuid()
-
-      // TODO: use UUIDified FileBox at here
-      const fileBox = FileBox.fromStream(
+      const fileBox = FileBoxUuid.fromStream(
         call.pipe(chunkDecoder()),
-        uuid,
+        'uuid.dat',
       )
-      void fileBox
+
+      const uuid = await fileBox.toUuid()
 
       const response = new pbPuppet.UploadResponse()
       response.setId(uuid)

@@ -2,6 +2,7 @@ import type {
   Readable,
 }                       from 'stream'
 import type {
+  FileBox,
   UuidLoader,
   UuidSaver,
 }                       from 'file-box'
@@ -16,9 +17,10 @@ import {
 
 const uuidLoaderGrpc: (grpcClient: () => pbPuppet.PuppetClient) => UuidLoader = (
   grpcClient,
-) => async (
-  uuid: string,
-) => {
+) => async function uuidLoader (
+  this : FileBox,
+  uuid : string,
+) {
   const request = new pbPuppet.DownloadRequest()
   request.setId(uuid)
 
@@ -32,9 +34,10 @@ const uuidLoaderGrpc: (grpcClient: () => pbPuppet.PuppetClient) => UuidLoader = 
 
 const uuidSaverGrpc: (grpcClient: () => pbPuppet.PuppetClient) => UuidSaver = (
   grpcClient,
-) => async (
-  stream: Readable,
-) => {
+) => async function uuidSaver (
+  this   : FileBox,
+  stream : Readable,
+) {
   const response = await new Promise<pbPuppet.UploadResponse>((resolve, reject) => {
     const request = grpcClient().upload((err, response) => {
       if (err) {
