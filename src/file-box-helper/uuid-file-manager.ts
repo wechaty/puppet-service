@@ -116,8 +116,9 @@ class UuidFileManager {
 
     const fileStream = fs.createWriteStream(this.uuidFile(uuid))
     const future = new Promise<void>((resolve, reject) => {
-      stream.on('end',    resolve)
-      stream.on('error',  reject)
+      stream.on('end',        resolve)
+      stream.on('error',      reject)
+      fileStream.on('error',  reject)
     })
     stream.pipe(fileStream)
     await future
