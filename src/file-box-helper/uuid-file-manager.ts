@@ -29,13 +29,13 @@ class UuidFileManager {
   constructor (
     options: UuidFileManagerOptions = {},
   ) {
-    log.verbose('UuidFileManager', 'constructor(%s)', JSON.stringify(options))
+    log.verbose('UuidFileManager', 'constructor("%s")', JSON.stringify(options))
 
     this.uuidDir = path.join(
       os.tmpdir(),
       'uuid-file-manager.' + String(process.pid),
     )
-    this.uuidTimerMap   = new Map()
+    this.uuidTimerMap = new Map()
 
     this.expireMilliseconds = options.expireMilliseconds ?? (DEFAULT_UUID_EXPIRE_MINUTES * 60 * 1000 * 1000)
   }
@@ -116,8 +116,8 @@ class UuidFileManager {
 
     const fileStream = fs.createWriteStream(this.uuidFile(uuid))
     const future = new Promise<void>((resolve, reject) => {
-      stream.on('end', resolve)
-      stream.on('error', reject)
+      fileStream.on('end',    resolve)
+      fileStream.on('error',  reject)
     })
     stream.pipe(fileStream)
     await future
@@ -128,7 +128,7 @@ class UuidFileManager {
   }
 
   /**
-   * Register a timer to execute cleaner callback after UUID_EXPIRE_MINUTES
+   * Register a timer to execute cleaner callback after `expireMilliseconds`
    */
   protected register (uuid: string): void {
     log.verbose('UuidFileManager', 'register(%s)', uuid)
@@ -193,9 +193,7 @@ class UuidFileManager {
       }
     }
 
-    for (const [_uuid, timer] of this.uuidTimerMap.entries()) {
-      clearTimeout(timer)
-    }
+    ;[...this.uuidTimerMap.values()].forEach(clearTimeout)
 
     log.verbose('UuidFileManager', 'destroy() fs.rmSync(%s) ...', this.uuidDir)
     try {
