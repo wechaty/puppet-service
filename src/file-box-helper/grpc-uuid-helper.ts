@@ -12,7 +12,7 @@ import {
 import {
   chunkDecoder,
   chunkEncoder,
-}                       from './transformer.js'
+}                       from './grpc-transformer.js'
 
 const uuidLoaderGrpc: (grpcClient: () => pbPuppet.PuppetClient) => UuidLoader = (
   grpcClient,
@@ -24,9 +24,10 @@ const uuidLoaderGrpc: (grpcClient: () => pbPuppet.PuppetClient) => UuidLoader = 
 
   const response = grpcClient().download(request)
 
-  return response.pipe(
-    chunkDecoder(),
-  )
+  const stream = response
+    .pipe(chunkDecoder())
+
+  return stream
 }
 
 const uuidSaverGrpc: (grpcClient: () => pbPuppet.PuppetClient) => UuidSaver = (
@@ -48,9 +49,8 @@ const uuidSaverGrpc: (grpcClient: () => pbPuppet.PuppetClient) => UuidSaver = (
       .pipe(request)
   })
 
-  const messageId = response.getId()
-
-  return messageId
+  const uuid = response.getId()
+  return uuid
 }
 
 export {

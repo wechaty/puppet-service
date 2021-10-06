@@ -24,24 +24,25 @@ import {
   PayloadType,
 }                                   from 'wechaty-puppet'
 
-import uuid from 'uuid'
-
 import {
   packFileBoxToPb,
   unpackConversationIdFileBoxArgsFromPb,
 }                                         from '../deprecated/mod.js'
+import { serializeFileBox }               from '../deprecated/serialize-file-box.js'
+
 import {
   timestampFromMilliseconds,
-}                                         from '../pure-functions/timestamp.js'
-
-import { grpcError }          from './grpc-error.js'
-import { EventStreamManager } from './event-stream-manager.js'
-import { serializeFileBox }   from './serialize-file-box.js'
+}                             from '../pure-functions/timestamp.js'
 import {
   chunkDecoder,
   chunkEncoder,
-}                   from '../uuid-file-box/mod.js'
+  randomUuid,
+}                             from '../file-box-helper/mod.js'
 
+import { grpcError }          from './grpc-error.js'
+import { EventStreamManager } from './event-stream-manager.js'
+
+// Deprecated. Will be removed after Dec 31, 2022
 const { StringValue } = google
 
 function puppetImplementation (
@@ -119,9 +120,12 @@ function puppetImplementation (
        * Set
        */
       try {
-        if (call.request.hasFilebox()) {
+        if (call.request.hasFileBox()) {
+
+          // TODO: use a uuidified FileBox here
           const fileBox = FileBox.fromJSON(
-            call.request.getFilebox(),
+
+            call.request.getFileBox(),
           )
           await puppet.contactAvatar(id, fileBox)
 
@@ -505,7 +509,7 @@ function puppetImplementation (
         const fileBox = await puppet.messageFile(id)
 
         const response = new pbPuppet.MessageFileResponse()
-        response.setFilebox(await serializeFileBox(fileBox))
+        response.setFileBox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
@@ -575,7 +579,7 @@ function puppetImplementation (
         const fileBox = await puppet.messageImage(id, type as number as ImageType)
 
         const response = new pbPuppet.MessageImageResponse()
-        response.setFilebox(await serializeFileBox(fileBox))
+        response.setFileBox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
@@ -747,7 +751,7 @@ function puppetImplementation (
 
       try {
         const conversationId = call.request.getConversationId()
-        const jsonText = call.request.getFilebox()
+        const jsonText = call.request.getFileBox()
 
         const fileBox = FileBox.fromJSON(jsonText)
 
@@ -1029,7 +1033,7 @@ function puppetImplementation (
         const fileBox = await puppet.roomAvatar(roomId)
 
         const response = new pbPuppet.RoomAvatarResponse()
-        response.setFilebox(await serializeFileBox(fileBox))
+        response.setFileBox(await serializeFileBox(fileBox))
 
         return callback(null, response)
 
@@ -1465,16 +1469,17 @@ function puppetImplementation (
     upload: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'upload()')
 
-      const id = uuid.v4()
+      const uuid = randomUuid()
 
+      // TODO: use UUIDified FileBox at here
       const fileBox = FileBox.fromStream(
         call.pipe(chunkDecoder()),
-        id,
+        uuid,
       )
       void fileBox
 
       const response = new pbPuppet.UploadResponse()
-      response.setId(id)
+      response.setId(uuid)
 
       return callback(null, response)
     },
