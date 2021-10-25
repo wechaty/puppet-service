@@ -381,10 +381,9 @@ export class PuppetService extends Puppet {
       }
     }
 
+    this.stopGrpcStream()
     if (this.grpcClient) {
       try {
-        this.stopGrpcStream()
-
         await util.promisify(
           this.grpcClient.stop
             .bind(this.grpcClient)
