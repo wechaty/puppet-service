@@ -415,7 +415,9 @@ export class PuppetService extends Puppet {
     log.verbose('PuppetService', 'startGrpcStream()')
 
     if (this.eventStream) {
-      throw new Error('event stream exists')
+      this.stopGrpcStream()
+      log.warn('PuppetService', 'startGrpcStream() grpc stream is already started, will terminate and start new stream')
+      // throw new Error('event stream exists')
     }
 
     let retry = MAX_GRPC_CONNECTION_RETRIES
