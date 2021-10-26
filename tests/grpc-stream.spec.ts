@@ -49,7 +49,7 @@ test('Close eventStream when gRPC breaks', async (t) => {
   t.ok(spyStart.called, 'should called the puppet server start() function')
 
   // mock grpcClient break
-  puppetService.mockGrpcBreak = async function() {
+  puppetService.mockGrpcBreak = async function () {
     await this.stopGrpcClient()
   }
 
