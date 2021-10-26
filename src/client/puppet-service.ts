@@ -573,8 +573,14 @@ export class PuppetService extends Puppet {
      *  destroy() will be enough to terminate a stream call.
      *  cancel() is not needed.
      */
-    // this.eventStream.cancel()
 
+    /**
+     * Nick(202110):
+     *  cancel() is needed when grpc connection breaks
+     */
+    if (!this.grpcClient) {
+      this.eventStream.cancel()
+    }
     this.eventStream.destroy()
     this.eventStream = undefined
   }
