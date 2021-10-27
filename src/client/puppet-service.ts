@@ -573,7 +573,7 @@ export class PuppetService extends Puppet {
      */
 
     /**
-     * Nick(202110):
+     * @hcfw007 Nick(202110):
      *  cancel() is needed when grpc connection breaks
      */
     if (!this.grpcClient) {
