@@ -2,7 +2,7 @@
 
 /**
    * @hcfw007, https://wechaty.js.org/contributors/wang-nan/
-   * reloated issue: attempt to reconnect gRPC after disconnection
+   * related issue: attempt to reconnect gRPC after disconnection
    * Scenario: the watchdog tries to restart the service but failed due to the existence of eventstream
    * Caused by the grpcClient set to undefined (still working on why this happens) while eventstream still working
    * issue: #172, https://github.com/wechaty/puppet-service/issues/172
