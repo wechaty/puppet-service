@@ -11,24 +11,25 @@
 import {
   test,
   sinon,
-} from 'tstest'
-
-import {
+}                             from 'tstest'
+import type {
   PuppetOptions,
-} from 'wechaty-puppet'
+}                             from 'wechaty-puppet'
 import {
   PuppetMock,
-} from 'wechaty-puppet-mock'
+}                             from 'wechaty-puppet-mock'
+import getPort                from 'get-port'
 
 import {
   PuppetService,
   PuppetServer,
   PuppetServerOptions,
-} from '../src/mod'
+}                             from '../src/mod.js'
 
 test('Close eventStream when gRPC breaks', async (t) => {
-  const TOKEN = 'test_token'
-  const ENDPOINT = '0.0.0.0:8788'
+  const TOKEN       = 'test_token'
+  const PORT        = await getPort()
+  const ENDPOINT    = `0.0.0.0:${PORT}`
 
   const puppet = new PuppetMock()
   const spyStart = sinon.spy(puppet, 'start')
