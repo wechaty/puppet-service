@@ -181,16 +181,24 @@ export class PuppetServer {
       this.grpcServer = undefined
 
       log.verbose('PuppetServer', 'stop() shuting down gRPC server ...')
-      await util.promisify(
+      const future = await util.promisify(
         grpcServer.tryShutdown
           .bind(grpcServer),
       )()
-      log.verbose('PuppetServer', 'stop() shuting down gRPC server ... done')
 
       try {
+        await new Promise(resolve => setImmediate(resolve))
         grpcServer.forceShutdown()
+        /**
+         * Huan(202110) grpc.tryShutdown() never return if client close the connection. #176
+         *  @see https://github.com/wechaty/puppet-service/issues/176
+         */
+        await future
+
       } catch (e) {
-        log.warn('PuppetServer', 'stop() grpcServer.forceShutdown() rejection: %s', (e as Error).message)
+        log.warn('PuppetServer', 'stop() gRPC shutdown rejection: %s', (e as Error).message)
+      } finally {
+        log.verbose('PuppetServer', 'stop() shuting down gRPC server ... done')
       }
 
     } else {
