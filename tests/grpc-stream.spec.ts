@@ -1,12 +1,15 @@
-#!/usr/bin/env ts-node
-
+#!/usr/bin/env -S node --no-warnings --loader ts-node/esm
 /**
-   * @hcfw007, https://wechaty.js.org/contributors/wang-nan/
-   * related issue: attempt to reconnect gRPC after disconnection
-   * Scenario: the watchdog tries to restart the service but failed due to the existence of eventstream
-   * Caused by the grpcClient set to undefined (still working on why this happens) while eventstream still working
-   * issue: #172, https://github.com/wechaty/puppet-service/issues/172
-   */
+ * @hcfw007, https://wechaty.js.org/contributors/wang-nan/
+ * related issue: attempt to reconnect gRPC after disconnection
+ * Scenario: the watchdog tries to restart the service but failed due to the existence of eventstream
+ * Caused by the grpcClient set to undefined (still working on why this happens) while eventstream still working
+ * issue: #172, https://github.com/wechaty/puppet-service/issues/172
+ *
+ * NodeJS: How Is Logging Enabled for the @grpc/grpc.js Package
+ *  https://stackoverflow.com/a/60935367/1123955
+ *    GRPC_VERBOSITY=DEBUG GRPC_TRACE=all
+ */
 
 import {
   test,
@@ -26,13 +29,19 @@ import {
   PuppetServerOptions,
 }                             from '../src/mod.js'
 
-test('Close eventStream when gRPC breaks', async (t) => {
-  const TOKEN       = 'test_token'
+test('Close eventStream when gRPC breaks', async t => {
+  /**
+   * Huan(202110):
+   * `insecure_` prefix is required for the TLS version of Puppet Service
+   *  because the `insecure` will be the SNI name of the Puppet Service
+   *  and it will be enforced for the security (required by TLS)
+   */
+  const TOKEN       = 'insecure_token'
   const PORT        = await getPort()
-  const ENDPOINT    = `0.0.0.0:${PORT}`
+  const ENDPOINT    = '0.0.0.0:' + PORT
 
   const puppet = new PuppetMock()
-  const spyStart = sinon.spy(puppet, 'start')
+  const spyOnStart = sinon.spy(puppet, 'onStart')
   /**
    * Puppet Server
    */
@@ -53,27 +62,18 @@ test('Close eventStream when gRPC breaks', async (t) => {
     token: TOKEN,
   } as PuppetOptions
 
-  const puppetService = (new PuppetService(puppetOptions)) as any
+  const puppetService = new PuppetService(puppetOptions)
   await puppetService.start()
-  t.ok(spyStart.called, 'should called the puppet server start() function')
+  t.ok(spyOnStart.called, 'should called the puppet server onStart() function')
+
+  puppetService.on('error', console.error)
 
   // mock grpcClient break
-  puppetService.mockGrpcBreak = async function () {
-    await this.stopGrpcClient()
-  }
-
-  await puppetService.mockGrpcBreak()
+  await puppetService.grpc.client.close()
   await puppetService.stop()
 
   // get eventStream status
-  puppetService.getEventStream = function () {
-    return this.eventStream
-  }
-  if (puppetService.getEventStream()) {
-    t.fail('event stream should be closed')
-  } else {
-    t.pass('event stream is closed')
-  }
+  t.throws(() => puppetService.grpc, 'should clean grpc after stop()')
 
   await puppetServer.stop()
 })
