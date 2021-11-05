@@ -336,11 +336,15 @@ export class PuppetService extends PUPPET.Puppet {
     )
   }
 
-  /**
-   * Huan(202108): consider to use `messagePayloadDirty`, `roomPayloadDirty`
-   *  to replace this `dirtyPayload` method for a clearer design and easy to maintain.
-   */
-  override async dirtyPayload (type: PUPPET.type.Payload, id: string) {
+/**
+ *
+ * Huan(202111) Issue #158 - Refactoring the 'dirty' event, dirtyPayload(),
+ *  and XXXPayloadDirty() methods logic & spec
+ *
+ *    @see https://github.com/wechaty/puppet/issues/158
+ *
+ */
+ override async dirtyPayload (type: PUPPET.type.Payload, id: string) {
     log.verbose('PuppetService', 'dirtyPayload(%s, %s)', type, id)
 
     await super.dirtyPayload(type, id)
