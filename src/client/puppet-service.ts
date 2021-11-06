@@ -1422,14 +1422,15 @@ export class PuppetService extends PUPPET.Puppet {
     return response.getMemberIdsList()
   }
 
-  override async roomMemberRawPayload (roomId: string, contactId: string): Promise<any>  {
+  override async roomMemberRawPayload (roomId: string, contactId: string): Promise<PUPPET.payload.RoomMember>  {
     log.verbose('PuppetService', 'roomMemberRawPayload(%s, %s)', roomId, contactId)
 
-    const id = this.payloadStore.roomMemberId(roomId, contactId)
-    const cachedPayload = await this.payloadStore.roomMember?.get(id)
-    if (cachedPayload) {
-      log.silly('PuppetService', 'roomMemberRawPayload(%s) cache HIT', id)
-      return cachedPayload
+    const cachedPayload           = await this.payloadStore.roomMember?.get(roomId)
+    const cachedRoomMemberPayload = cachedPayload && cachedPayload[contactId]
+
+    if (cachedRoomMemberPayload) {
+      log.silly('PuppetService', 'roomMemberRawPayload(%s, %s) cache HIT', roomId, contactId)
+      return cachedRoomMemberPayload
     }
 
     const request = new grpcPuppet.RoomMemberPayloadRequest()
@@ -1449,13 +1450,16 @@ export class PuppetService extends PUPPET.Puppet {
       roomAlias : response.getRoomAlias(),
     }
 
-    await this.payloadStore.roomMember?.set(id, payload)
-    log.silly('PuppetService', 'roomMemberRawPayload(%s) cache SET', id)
+    await this.payloadStore.roomMember?.set(roomId, {
+      ...cachedPayload,
+      contactId: payload,
+    })
+    log.silly('PuppetService', 'roomMemberRawPayload(%s, %s) cache SET', roomId, contactId)
 
     return payload
   }
 
-  override async roomMemberRawPayloadParser (payload: any): Promise<PUPPET.payload.RoomMember>  {
+  override async roomMemberRawPayloadParser (payload: PUPPET.payload.RoomMember): Promise<PUPPET.payload.RoomMember>  {
     // log.silly('PuppetService', 'roomMemberRawPayloadParser({id:%s})', payload.id)
     // passthrough
     return payload
