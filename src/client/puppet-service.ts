@@ -175,16 +175,16 @@ export class PuppetService extends Puppet {
     const chatieEndpoint = GET_WECHATY_SERVICE_DISCOVERY_ENDPOINT()
 
     try {
-      return Promise.race<
+      const result = await Promise.race<
         Promise<{
           ip: string,
           port: number
-        }>
+        } | Error>
       >([
         this.getServiceIp(chatieEndpoint, token),
         // eslint-disable-next-line promise/param-names
-        new Promise((_, reject) => setTimeout(
-          () => reject(new Error('ETIMEOUT')),
+        new Promise((resolve) => setTimeout(
+          () => resolve(new Error('ETIMEOUT')),
           /**
            * Huan(202106): Better deal with the timeout error
            *  Related to https://github.com/wechaty/wechaty/issues/2197
@@ -192,6 +192,11 @@ export class PuppetService extends Puppet {
           5 * 1000,
         )),
       ])
+      if (result instanceof Error) {
+        throw(result)
+      } else {
+        return result as any
+      }
     } catch (e) {
       log.warn(`discoverServiceIp() failed to get any ip info from all service endpoints.\n${e.stack}`)
       return {}
