@@ -193,7 +193,7 @@ export class PuppetService extends Puppet {
         )),
       ])
       if (result instanceof Error) {
-        throw(result)
+        throw result
       } else {
         return result as any
       }
