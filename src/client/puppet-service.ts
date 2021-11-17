@@ -40,7 +40,7 @@ import {
 }                       from '../event-type-rev.js'
 import { packageJson }  from '../package-json.js'
 
-import { recover$ }     from './recover$.js'
+import { autoRecover$ }     from './auto-recover$.js'
 import { GrpcManager }   from './grpc-manager.js'
 import { PayloadStore } from './payload-store.js'
 
@@ -138,7 +138,7 @@ export class PuppetService extends PUPPET.Puppet {
     await grpcManager.start()
     log.verbose('PuppetService', 'start() starting grpc manager... done')
 
-    this.recoverSubscription = recover$(this).subscribe({
+    this.recoverSubscription = autoRecover$(this).subscribe({
       complete : () => log.verbose('PuppetService', 'onStart() recover$().subscribe() complete()'),
       error    : e  => log.error('PuppetService', 'onStart() recover$().subscribe() error(%s)', e),
       next     : x  => log.verbose('PuppetService', 'onStart() recover$().subscribe() next(%s)', JSON.stringify(x)),
