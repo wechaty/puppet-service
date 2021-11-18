@@ -181,10 +181,10 @@ export class PuppetServer {
       this.grpcServer = undefined
 
       log.verbose('PuppetServer', 'stop() shuting down gRPC server ...')
-      // const future = await util.promisify(
-      //   grpcServer.tryShutdown
-      //     .bind(grpcServer),
-      // )()
+      const future = await util.promisify(
+        grpcServer.tryShutdown
+          .bind(grpcServer),
+      )()
 
       try {
         await new Promise(resolve => setImmediate(resolve))
@@ -196,7 +196,7 @@ export class PuppetServer {
          * FIXME: even after called `forceShutdown()`, the `tryShutdown()` can not resolved.
          *  commented out the `await` for now to make it work temporary.
          */
-        // await future
+        await future
 
       } catch (e) {
         log.warn('PuppetServer', 'stop() gRPC shutdown rejection: %s', (e as Error).message)
