@@ -35,10 +35,10 @@ import {
 }                             from 'wechaty-redux'
 import {
   Ducks,
-  Bundle,
+  // Bundle,
 }                             from 'ducks'
-import type { Store }         from 'redux'
-import type { Subscription }  from 'rxjs'
+// import type { Store }         from 'redux'
+// import type { Subscription }  from 'rxjs'
 
 /**
  * Deprecated. Will be removed after Dec 31, 2022
