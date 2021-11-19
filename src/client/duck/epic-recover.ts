@@ -20,6 +20,7 @@
 import {
   Observable,
   interval,
+  timer,
 }                       from 'rxjs'
 import {
   debounce,
@@ -51,18 +52,21 @@ const stateInactive$ = (action$: Observable<AnyAction>) => action$.pipe(
 )
 
 const heartbeat$ = (action$: Observable<AnyAction>) => action$.pipe(
-  filter(isActionOf(PuppetDuck.actions.heartbeatEvent)),
+  filter(isActionOf([
+    PuppetDuck.actions.heartbeatEvent,
+    PuppetDuck.actions.dongEvent,
+  ])),
 )
 
-// Emit when an active puppet have no heartbeat after a timeout period
+// Emit once when an active puppet lost heartbeat after a timeout period
 const monitorHeartbeat$ = (timeoutMilliseconds: number) =>
   (action$: Observable<AnyAction>) =>
     stateActive$(action$).pipe(
       switchMap(action => heartbeat$(action$).pipe(
         debounce(() => interval(timeoutMilliseconds)),
         tap(() => log.verbose('PuppetService', 'monitorHeartbeat$() %d seconds TIMEOUT',
-          Math.floor(timeoutMilliseconds / 1000)),
-        ),
+          Math.floor(timeoutMilliseconds / 1000),
+        )),
         mapTo(PuppetDuck.actions.errorEvent(
           action.payload.puppetId,
           { gerror: `monitorHeartbeat$() TIMEOUT(${timeoutMilliseconds})` },
@@ -73,12 +77,12 @@ const monitorHeartbeat$ = (timeoutMilliseconds: number) =>
 const epicRecoverDing$ = (timeoutMilliseconds: number) =>
   (action$: Observable<AnyAction>) =>
     monitorHeartbeat$(timeoutMilliseconds)(action$).pipe(
-      switchMap(action => interval(Math.floor(timeoutMilliseconds / 2)).pipe(
-        mapTo(() => PuppetDuck.actions.ding(
+      switchMap(action => timer(0, Math.floor(timeoutMilliseconds)).pipe(
+        tap(n => log.verbose('PuppetService', 'epicRecoverDing$() actions.ding() emitted #%d', n)),
+        mapTo(PuppetDuck.actions.ding(
           action.payload.puppetId,
           'epicRecoverDing$',
         )),
-        tap(() => log.verbose('PuppetService', 'epicRecoverDing$() actions.ding() emitted')),
         takeUntil(heartbeat$(action$)),
         takeUntil(stateInactive$(action$)),
       )),
@@ -87,12 +91,12 @@ const epicRecoverDing$ = (timeoutMilliseconds: number) =>
 const epicRecoverReset$ = (timeoutMilliseconds: number) =>
   (action$: Observable<AnyAction>) =>
     monitorHeartbeat$(timeoutMilliseconds)(action$).pipe(
-      switchMap(action => interval(Math.floor(timeoutMilliseconds * 2)).pipe(
-        mapTo(() => PuppetDuck.actions.reset(
+      switchMap(action => timer(0, timeoutMilliseconds * 2).pipe(
+        tap(n => log.verbose('PuppetService', 'epicRecoverReset$() actions.reset() emitted #%d', n)),
+        mapTo(PuppetDuck.actions.reset(
           action.payload.puppetId,
           'epicRecoverReset$',
         )),
-        tap(() => log.verbose('PuppetService', 'epicRecoverReset$() actions.reset() emitted')),
         takeUntil(heartbeat$(action$)),
         takeUntil(stateInactive$(action$)),
       )),

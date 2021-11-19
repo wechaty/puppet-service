@@ -43,7 +43,56 @@ test('Example: marble testing', async t => {
   })
 })
 
-test('monitorHeartbeat$()', async t => {
+test('Example 2: marble subscribe time frame testing', async t => {
+  const testScheduler = new TestScheduler(t.same)
+
+  testScheduler.run(helpers => {
+    const { hot, expectObservable, expectSubscriptions } = helpers
+    const source = hot('  --a--b--c--d--e--f')
+    const subscription = '-----^------!-'
+    const expected = '    -----b--c--d--'
+    expectObservable(source, subscription).toBe(expected)
+    void expectSubscriptions
+    // expectSubscriptions(source.subscriptions).toBe(subscription)
+  })
+})
+
+test('Example 3: subscribe with unsubscribe / complete', async t => {
+  const testScheduler = new TestScheduler(t.same)
+
+  testScheduler.run(({ hot, expectObservable }) => {
+    const values = {
+      a: 0,
+      b: 1,
+      c: 2,
+    }
+    const source = hot('   10ms a 9ms  b 9ms  c-|', values)
+    const subscription1 = '       20ms ^ 9ms  -!-'
+    const subscription2 = '              30ms ^--'
+    const expected1 = '           20ms b 9ms  c--'
+    const expected2 = '                  30ms c-|'
+    expectObservable(source, subscription1).toBe(expected1, values)
+    expectObservable(source, subscription2).toBe(expected2, values)
+  })
+})
+
+test('Example 4: play ground', async t => {
+  const testScheduler = new TestScheduler(t.same)
+
+  testScheduler.run(helpers => {
+    const { hot, cold, expectObservable } = helpers
+    void hot
+    void cold
+    const TIMEOUT = 15
+    const source    = hot(`-----a-----h------h ${TIMEOUT}ms --`)
+    const sub       = `    ------^-------!---- ${TIMEOUT}ms --`
+    const expected  = `    -----------h------- ${TIMEOUT}ms --`
+
+    expectObservable(source, sub).toBe(expected)
+  })
+})
+
+test('monitorHeartbeat$() emit once after lost heartbeat', async t => {
   const testScheduler = new TestScheduler(t.same)
 
   const puppet = new PuppetMock()
@@ -55,24 +104,77 @@ test('monitorHeartbeat$()', async t => {
 
     const marble = {
       a: PuppetDuck.actions.activeState   (puppet.id, true),
+      d: PuppetDuck.actions.dongEvent     (puppet.id, { data: 'dong' }),
+      e: PuppetDuck.actions.errorEvent    (puppet.id, { gerror: `monitorHeartbeat$() TIMEOUT(${TIMEOUT})` }),
       h: PuppetDuck.actions.heartbeatEvent(puppet.id, { data: 'heartbeat' }),
-      t: PuppetDuck.actions.errorEvent    (puppet.id, { gerror: `monitorHeartbeat$() TIMEOUT(${TIMEOUT})` }),
     }
 
-    const puppet$   = hot(`-^--a-----h------h ${TIMEOUT}ms -`, marble)
-    const puppetSub = `     ^---------------- ${TIMEOUT}ms -`
-    const expected  = `      ---------------- ${TIMEOUT}ms t`
+    const puppet$ = hot(` -a----h----h ${TIMEOUT}ms       ${TIMEOUT}ms ${TIMEOUT}ms ${TIMEOUT - 1}ms h ${TIMEOUT}ms       ${TIMEOUT - 1}ms d ${TIMEOUT}ms       ------`, marble)
+    const subscription = `^----------- ${TIMEOUT}ms       ${TIMEOUT}ms ${TIMEOUT}ms ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       -----!`
+    const expected  = `   ------------ ${TIMEOUT - 1}ms e ${TIMEOUT}ms ${TIMEOUT}ms ${TIMEOUT}ms       ${TIMEOUT - 1}ms e ${TIMEOUT}ms       ${TIMEOUT - 1}ms e ------`
 
     expectObservable(
       monitorHeartbeat$(TIMEOUT)(puppet$),
-      // puppetSub,
+      subscription,
     ).toBe(expected, marble)
-    expectSubscriptions(puppet$.subscriptions).toBe(puppetSub)
+
+    void expectSubscriptions
+    // expectSubscriptions(puppet$.subscriptions).toBe(sub)
   })
 })
 
-test('tbw', async t => {
-  void epicRecoverReset$
-  void epicRecoverDing$
-  t.pass('tbw')
+test('epicRecoverDing$() emit periodly', async t => {
+  const testScheduler = new TestScheduler(t.same)
+
+  const puppet = new PuppetMock()
+
+  const TIMEOUT = 15
+
+  testScheduler.run(helpers => {
+    const { hot, expectObservable } = helpers
+
+    const marble = {
+      a: PuppetDuck.actions.activeState   (puppet.id, true),
+      d: PuppetDuck.actions.dongEvent     (puppet.id, { data: 'dong' }),
+      h: PuppetDuck.actions.heartbeatEvent(puppet.id, { data: 'heartbeat' }),
+      i: PuppetDuck.actions.ding          (puppet.id, 'epicRecoverDing$'),
+    }
+
+    const puppet$ = hot(` -a----h----h ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT - 1}ms h ${TIMEOUT - 1}ms h ${TIMEOUT - 1}ms d ${TIMEOUT - 1}ms d ------`, marble)
+    const subscription = `^----------- ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       -----!`
+    const expected  = `   ------------ ${TIMEOUT - 1}ms i ${TIMEOUT - 1}ms i ${TIMEOUT - 1}ms i ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ------`
+
+    expectObservable(
+      epicRecoverDing$(TIMEOUT)(puppet$),
+      subscription,
+    ).toBe(expected, marble)
+  })
+})
+
+test('epicRecoverReset$() emit periodly', async t => {
+  const testScheduler = new TestScheduler(t.same)
+
+  const puppet = new PuppetMock()
+
+  const TIMEOUT = 60
+
+  testScheduler.run(helpers => {
+    const { hot, expectObservable } = helpers
+
+    const marble = {
+      a: PuppetDuck.actions.activeState   (puppet.id, true),
+      d: PuppetDuck.actions.dongEvent     (puppet.id, { data: 'dong' }),
+      h: PuppetDuck.actions.heartbeatEvent(puppet.id, { data: 'heartbeat' }),
+      r: PuppetDuck.actions.reset         (puppet.id, 'epicRecoverReset$'),
+    }
+
+    const puppet$ = hot(` -a----h----h ${TIMEOUT}ms       ${TIMEOUT * 2}ms       ${TIMEOUT * 2}ms       ${TIMEOUT * 2 - 1}ms h ${TIMEOUT - 1}ms h ${TIMEOUT - 1}ms d ${TIMEOUT - 1}ms d ------`, marble)
+    const subscription = `^----------- ${TIMEOUT}ms       ${TIMEOUT * 2}ms       ${TIMEOUT * 2}ms       ${TIMEOUT * 2}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       -----!`
+    const expected  = `   ------------ ${TIMEOUT - 1}ms r ${TIMEOUT * 2 - 1}ms r ${TIMEOUT * 2 - 1}ms r ${TIMEOUT * 2}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ------`
+
+    expectObservable(
+      epicRecoverReset$(TIMEOUT)(puppet$),
+      subscription,
+    ).toBe(expected, marble)
+  })
 })
