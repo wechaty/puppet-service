@@ -37,7 +37,7 @@ import {
   Ducks,
   // Bundle,
 }                             from 'ducks'
-// import type { Store }         from 'redux'
+import type { Store }         from 'redux'
 // import type { Subscription }  from 'rxjs'
 
 /**
@@ -91,8 +91,8 @@ class PuppetService extends PUPPET.Puppet {
   /**
    * Wechaty Redux
    */
-  protected _puppet$: ReturnType<typeof puppet$>
   protected _ducks: Ducks<{ puppet: typeof PuppetDuck }>
+  protected _store: Store
 
   protected _grpcManager?: GrpcManager
   get grpcManager (): GrpcManager {
@@ -119,8 +119,8 @@ class PuppetService extends PUPPET.Puppet {
 
     this.hookPayloadStore()
 
-    this._puppet$ = puppet$(this)
-    this._ducks   = new Ducks({ puppet: PuppetDuck })
+    this._ducks = new Ducks({ puppet: PuppetDuck })
+    this._store = this._ducks.configureStore()
 
     this._cleanupCallbackList = []
 
@@ -176,9 +176,8 @@ class PuppetService extends PUPPET.Puppet {
     /**
      * Ducks management
      */
-    const store = this._ducks.configureStore()
     const subscription = puppet$(this)
-      .subscribe(store.dispatch)
+      .subscribe(this._store.dispatch)
 
     this._cleanupCallbackList.push(
       () => subscription.unsubscribe(),
