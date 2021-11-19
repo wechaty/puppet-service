@@ -18,9 +18,7 @@
  *
  */
 const NOOP = 'wechaty/NOOP'
-const HEARTBEAT_TIMEOUT = 'wechaty-puppet-service/HEARTBEAT_TIMEOUT'
 
 export {
   NOOP,
-  HEARTBEAT_TIMEOUT,
 }

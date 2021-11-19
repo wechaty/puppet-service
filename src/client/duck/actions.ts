@@ -30,10 +30,6 @@ import * as types   from './types.js'
  */
 const noop = createAction(types.NOOP)()
 
-const prepareHeartbeatTimeout = (puppetId: string, data: string) => ({ data, puppetId })
-const heartbeatTimeout = createAction(types.HEARTBEAT_TIMEOUT, prepareHeartbeatTimeout)()
-
 export {
   noop,
-  heartbeatTimeout,
 }
