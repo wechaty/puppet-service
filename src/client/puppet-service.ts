@@ -564,7 +564,7 @@ export class PuppetService extends Puppet {
   }
 
   private stopGrpcStream (): void {
-    log.info('PuppetService', 'stopGrpcStream()')
+    log.verbose('PuppetService', 'stopGrpcStream()')
 
     if (!this.eventStream) {
       log.verbose('PuppetService', 'no eventStream when stop, skip destroy.')
