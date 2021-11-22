@@ -564,7 +564,7 @@ export class PuppetService extends Puppet {
   }
 
   private stopGrpcStream (): void {
-    log.verbose('PuppetService', 'stopGrpcStream()')
+    log.info('PuppetService', 'stopGrpcStream()')
 
     if (!this.eventStream) {
       log.verbose('PuppetService', 'no eventStream when stop, skip destroy.')
@@ -582,6 +582,7 @@ export class PuppetService extends Puppet {
      *  cancel() is needed when grpc connection breaks
      */
     if (!this.grpcClient) {
+      log.warn('PuppetService', 'stopGrpcStream() trying to stopGrpcStream with no grpcClient')
       this.eventStream.cancel()
     }
     this.eventStream.destroy()
