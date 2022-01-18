@@ -91,7 +91,7 @@ class EventStreamManager {
       this.grpcEmit(grpcPuppet.EventType.EVENT_TYPE_LOGIN, payload)
     }
 
-    if (this.puppet.readyIndicator?.value()) {
+    if (this.puppet.readyIndicator.value()) {
       log.verbose('EventStreamManager', 'start() puppet is ready, emit a ready event for downstream')
 
       const payload = {
