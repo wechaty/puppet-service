@@ -11,12 +11,8 @@ import PuppetService, {
   PuppetServer,
   PuppetServerOptions,
 } from '../src/mod.js'
-import { log } from 'brolog'
 
 const NIL_UUID_V4 = '00000000-0000-0000-0000-000000000000'
-const TIME_WAITING_FOR_READY = 10 * 1000
-
-const PRE = 'ReadyEventTest'
 
 test('ready event test', async t => {
   const PORT = await getPort()
@@ -51,32 +47,9 @@ test('ready event test', async t => {
   // check if ready event is emited on this ready-ed puppet
   const puppetService = new PuppetService(puppetOptions)
 
-  let ready = false
-  let testResolver: Function
-  let testRejector: Function
-  const testPromise = new Promise((resolve, reject) => {
-    testResolver = resolve
-    testResolver()
-    testRejector = reject
-  })
-
-  const timeout = setTimeout(() => {
-    if (!ready) {
-      t.fail('receive the ready event timeout')
-      testRejector()
-    }
-  }, TIME_WAITING_FOR_READY)
-
-  puppetService.on('ready', () => {
-    log.info(PRE, 'got the ready event')
-    ready = true
-    t.pass('should receive the ready event')
-    clearTimeout(timeout)
-  })
-
+  const future = new Promise(resolve => puppetService.once('ready', resolve))
   await puppetService.start()
-
-  await testPromise
+  await t.resolves(future, 'should resolve')
 
   await puppetService.stop()
   await puppetServer.stop()
