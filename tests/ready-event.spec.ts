@@ -52,22 +52,32 @@ test('ready event test', async t => {
   const puppetService = new PuppetService(puppetOptions)
 
   let ready = false
+  let testResolver: Function
+  let testRejector: Function
+  const testPromise = new Promise((resolve, reject) => {
+    testResolver = resolve
+    testResolver()
+    testRejector = reject
+  })
+
+  const timeout = setTimeout(() => {
+    if (!ready) {
+      t.fail('receive the ready event timeout')
+      testRejector()
+    }
+  }, TIME_WAITING_FOR_READY)
+
   puppetService.on('ready', () => {
     log.info(PRE, 'got the ready event')
     ready = true
     t.pass('should receive the ready event')
+    clearTimeout(timeout)
   })
 
   await puppetService.start()
 
-  await new Promise<void>(resolve => {
-    setTimeout(() => {
-      if (!ready) {
-        t.fail('receive the ready event timeout')
-      }
-      resolve()
-    }, TIME_WAITING_FOR_READY)
-  })
+  await testPromise
+
   await puppetService.stop()
   await puppetServer.stop()
 })
