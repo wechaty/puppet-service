@@ -25,7 +25,7 @@ import {
 import {
   debounce,
   filter,
-  mapTo,
+  map,
   switchMap,
   takeUntil,
   tap,
@@ -43,18 +43,18 @@ import {
 import { log }          from 'wechaty-puppet'
 
 const stateActive$ = (action$: Observable<AnyAction>) => action$.pipe(
-  filter(isActionOf(PuppetDuck.actions.activeState)),
-  filter(action => action.payload.status === true),
+  filter(isActionOf(PuppetDuck.actions.stateActivatedEvent)),
+  filter(action => action.payload.state === true),
 )
 
 const stateInactive$ = (action$: Observable<AnyAction>) => action$.pipe(
-  filter(isActionOf(PuppetDuck.actions.inactiveState)),
+  filter(isActionOf(PuppetDuck.actions.stateInactivatedEvent)),
 )
 
 const heartbeat$ = (action$: Observable<AnyAction>) => action$.pipe(
   filter(isActionOf([
-    PuppetDuck.actions.heartbeatEvent,
-    PuppetDuck.actions.dongEvent,
+    PuppetDuck.actions.heartbeatReceivedEvent,
+    PuppetDuck.actions.dongReceivedEvent,
   ])),
 )
 
@@ -67,7 +67,7 @@ const monitorHeartbeat$ = (timeoutMilliseconds: number) =>
         tap(() => log.verbose('PuppetService', 'monitorHeartbeat$() %d seconds TIMEOUT',
           Math.floor(timeoutMilliseconds / 1000),
         )),
-        mapTo(PuppetDuck.actions.errorEvent(
+        map(() => PuppetDuck.actions.errorReceivedEvent(
           action.payload.puppetId,
           { gerror: `monitorHeartbeat$() TIMEOUT(${timeoutMilliseconds})` },
         )),
@@ -79,7 +79,7 @@ const epicRecoverDing$ = (timeoutMilliseconds: number) =>
     monitorHeartbeat$(timeoutMilliseconds)(action$).pipe(
       switchMap(action => timer(0, Math.floor(timeoutMilliseconds)).pipe(
         tap(n => log.verbose('PuppetService', 'epicRecoverDing$() actions.ding() emitted #%d', n)),
-        mapTo(PuppetDuck.actions.ding(
+        map(() => PuppetDuck.actions.ding(
           action.payload.puppetId,
           'epicRecoverDing$',
         )),
@@ -93,7 +93,7 @@ const epicRecoverReset$ = (timeoutMilliseconds: number) =>
     monitorHeartbeat$(timeoutMilliseconds)(action$).pipe(
       switchMap(action => timer(0, timeoutMilliseconds * 2).pipe(
         tap(n => log.verbose('PuppetService', 'epicRecoverReset$() actions.reset() emitted #%d', n)),
-        mapTo(PuppetDuck.actions.reset(
+        map(() => PuppetDuck.actions.reset(
           action.payload.puppetId,
           'epicRecoverReset$',
         )),
