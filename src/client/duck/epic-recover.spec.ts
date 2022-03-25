@@ -137,7 +137,7 @@ test('epicRecoverDing$() emit periodly', async t => {
       a: PuppetDuck.actions.stateActivatedEvent   (puppet.id, true),
       d: PuppetDuck.actions.dongReceivedEvent     (puppet.id, { data: 'dong' }),
       h: PuppetDuck.actions.heartbeatReceivedEvent(puppet.id, { data: 'heartbeat' }),
-      i: PuppetDuck.actions.ding          (puppet.id, 'epicRecoverDing$'),
+      i: PuppetDuck.actions.dingCommand           (puppet.id, 'epicRecoverDing$'),
     }
 
     const puppet$ = hot(` -a----h----h ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT}ms       ${TIMEOUT - 1}ms h ${TIMEOUT - 1}ms h ${TIMEOUT - 1}ms d ${TIMEOUT - 1}ms d ------`, marble)
@@ -165,7 +165,7 @@ test('epicRecoverReset$() emit periodly', async t => {
       a: PuppetDuck.actions.stateActivatedEvent   (puppet.id, true),
       d: PuppetDuck.actions.dongReceivedEvent     (puppet.id, { data: 'dong' }),
       h: PuppetDuck.actions.heartbeatReceivedEvent(puppet.id, { data: 'heartbeat' }),
-      r: PuppetDuck.actions.reset         (puppet.id, 'epicRecoverReset$'),
+      r: PuppetDuck.actions.resetCommand          (puppet.id, 'epicRecoverReset$'),
     }
 
     const puppet$ = hot(` -a----h----h ${TIMEOUT}ms       ${TIMEOUT * 2}ms       ${TIMEOUT * 2}ms       ${TIMEOUT * 2 - 1}ms h ${TIMEOUT - 1}ms h ${TIMEOUT - 1}ms d ${TIMEOUT - 1}ms d ------`, marble)

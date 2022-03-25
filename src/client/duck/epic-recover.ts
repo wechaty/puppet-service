@@ -68,7 +68,7 @@ const monitorHeartbeat$ = (timeoutMilliseconds: number) =>
           Math.floor(timeoutMilliseconds / 1000),
         )),
         map(() => PuppetDuck.actions.errorReceivedEvent(
-          action.payload.puppetId,
+          action.meta.puppetId,
           { gerror: `monitorHeartbeat$() TIMEOUT(${timeoutMilliseconds})` },
         )),
       )),
@@ -79,8 +79,8 @@ const epicRecoverDing$ = (timeoutMilliseconds: number) =>
     monitorHeartbeat$(timeoutMilliseconds)(action$).pipe(
       switchMap(action => timer(0, Math.floor(timeoutMilliseconds)).pipe(
         tap(n => log.verbose('PuppetService', 'epicRecoverDing$() actions.ding() emitted #%d', n)),
-        map(() => PuppetDuck.actions.ding(
-          action.payload.puppetId,
+        map(() => PuppetDuck.actions.dingCommand(
+          action.meta.puppetId,
           'epicRecoverDing$',
         )),
         takeUntil(heartbeat$(action$)),
@@ -93,8 +93,8 @@ const epicRecoverReset$ = (timeoutMilliseconds: number) =>
     monitorHeartbeat$(timeoutMilliseconds)(action$).pipe(
       switchMap(action => timer(0, timeoutMilliseconds * 2).pipe(
         tap(n => log.verbose('PuppetService', 'epicRecoverReset$() actions.reset() emitted #%d', n)),
-        map(() => PuppetDuck.actions.reset(
-          action.payload.puppetId,
+        map(() => PuppetDuck.actions.resetCommand(
+          action.meta.puppetId,
           'epicRecoverReset$',
         )),
         takeUntil(heartbeat$(action$)),
