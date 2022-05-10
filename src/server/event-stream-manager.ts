@@ -92,7 +92,7 @@ class EventStreamManager {
     }
 
     if (this.puppet.readyIndicator.value()) {
-      log.verbose('EventStreamManager', 'start() puppet is ready, emit a ready event for downstream ater 100ms delay')
+      log.verbose('EventStreamManager', 'start() puppet is ready, emit a ready event for downstream after 100ms delay')
 
       const payload = {
         data: 'ready',
