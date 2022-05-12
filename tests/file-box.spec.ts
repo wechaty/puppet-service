@@ -49,7 +49,6 @@ test('message file test', async t => {
     token: TOKEN,
   } as PuppetOptions
 
-  // check if ready event is emited on this ready-ed puppet
   const puppetService = new PuppetService(puppetOptions)
   await puppetService.start()
 
