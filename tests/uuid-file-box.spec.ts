@@ -19,7 +19,7 @@ test('message file test', async t => {
   const TOKEN = `insecure_${NIL_UUID_V4}`
   const ENDPOINT = `0.0.0.0:${PORT}`
 
-  const FILE          = path.join(__dirname, 'fixtures', 'smoke-testing.ts')
+  const FILE          = path.join(__dirname, 'tests', 'fixtures', 'smoke-testing.ts')
   const EXPECTED_SIZE = fs.statSync(FILE).size
 
   /**
