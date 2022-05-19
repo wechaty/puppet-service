@@ -7,7 +7,7 @@ import type { PuppetOptions }   from 'wechaty-puppet'
 import PuppetMock               from 'wechaty-puppet-mock'
 import getPort                  from 'get-port'
 import temp                     from 'temp'
-import { FileBox }              from 'file-box'
+import { FileBox, FileBoxType }              from 'file-box'
 
 import PuppetService, { PuppetServer, PuppetServerOptions } from '../src/mod.js'
 
@@ -49,9 +49,60 @@ test('message file test', async t => {
   await puppetService.start()
 
   const file = await puppetService.messageFile('sb')
+  t.not(file.type, FileBoxType.Stream, 'should not fallback to messageFileStream')
 
   const tmpFolder = temp.mkdirSync('test')
   const tmpFile = path.join(tmpFolder, 'uuid-file.dat')
+
+  await file.toFile(tmpFile)
+  const fileSize = fs.statSync(tmpFile).size
+
+  t.equal(fileSize, EXPECTED_SIZE, 'should save file with the correct size')
+
+  fs.rmSync(tmpFile)
+  await puppetService.stop()
+  await puppetServer.stop()
+})
+
+test('buffer file test', async t => {
+  const PORT = await getPort()
+  const TOKEN = `insecure_${NIL_UUID_V4}`
+  const ENDPOINT = `0.0.0.0:${PORT}`
+
+  const FILE = path.join(__dirname, 'tests', 'fixtures', 'smoke-testing.ts')
+  const EXPECTED_SIZE = fs.statSync(FILE).size
+
+  /**
+   * Puppet Server
+   */
+  const puppet = new PuppetMock()
+  puppet.messageFile = async () => FileBox.fromBuffer(await FileBox.fromFile(FILE).toBuffer())
+
+  const serverOptions = {
+    endpoint: ENDPOINT,
+    puppet: puppet,
+    token: TOKEN,
+  } as PuppetServerOptions
+
+  const puppetServer = new PuppetServer(serverOptions)
+  await puppetServer.start()
+
+  /**
+   * Puppet Service Client
+   */
+  const puppetOptions = {
+    endpoint: ENDPOINT,
+    token: TOKEN,
+  } as PuppetOptions
+
+  const puppetService = new PuppetService(puppetOptions)
+  await puppetService.start()
+
+  const file = await puppetService.messageFile('sb')
+  t.not(file.type, FileBoxType.Stream, 'should not fallback to messageFileStream')
+
+  const tmpFolder = temp.mkdirSync('test')
+  const tmpFile = path.join(tmpFolder, 'buffer-file.dat')
 
   await file.toFile(tmpFile)
   const fileSize = fs.statSync(tmpFile).size
