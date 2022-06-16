@@ -873,6 +873,28 @@ class PuppetService extends PUPPET.Puppet {
     return contactId
   }
 
+  override async messageChannel (
+    messageId: string,
+  ): Promise<PUPPET.payloads.Channel> {
+    log.verbose('PuppetService', 'messageChannel(%s)', messageId)
+
+    const request = new grpcPuppet.MessageChannelRequest()
+    request.setId(messageId)
+
+    const response = await util.promisify(
+      this.grpcManager.client.messageChannel
+        .bind(this.grpcManager.client),
+    )(request)
+
+    const channelPayload = response.getChannel()!.toObject()
+
+    const payload: PUPPET.payloads.Channel = {
+      ...channelPayload,
+    }
+
+    return payload
+  }
+
   override async messageSendMiniProgram (
     conversationId     : string,
     miniProgramPayload : PUPPET.payloads.MiniProgram,
@@ -948,6 +970,38 @@ class PuppetService extends PUPPET.Puppet {
 
     if (id) {
       return id
+    }
+  }
+
+  override async messageSendChannel (
+    conversationId: string,
+    channelPayload: PUPPET.payloads.Channel,
+  ): Promise<void | string> {
+    log.verbose('PuppetService', 'messageSendChannel(%s, "%s")', conversationId, JSON.stringify(channelPayload))
+
+    const request = new grpcPuppet.MessageSendChannelRequest()
+    request.setConversationId(conversationId)
+
+    const pbChannelPayload = new grpcPuppet.ChannelPayload()
+    if (channelPayload.avatar) { pbChannelPayload.setAvatar(channelPayload.avatar) }
+    if (channelPayload.coverUrl) { pbChannelPayload.setCoverUrl(channelPayload.coverUrl) }
+    if (channelPayload.desc) { pbChannelPayload.setDesc(channelPayload.desc) }
+    if (channelPayload.extras) { pbChannelPayload.setExtras(channelPayload.extras) }
+    if (channelPayload.feedType) { pbChannelPayload.setFeedType(channelPayload.feedType) }
+    if (channelPayload.nickname) { pbChannelPayload.setNickname(channelPayload.nickname) }
+    if (channelPayload.thumbUrl) { pbChannelPayload.setThumbUrl(channelPayload.thumbUrl) }
+    if (channelPayload.url) { pbChannelPayload.setUrl(channelPayload.url) }
+    request.setChannel(pbChannelPayload)
+
+    const response = await util.promisify(
+      this.grpcManager.client.messageSendChannel
+        .bind(this.grpcManager.client),
+    )(request)
+
+    const messageId = response.getId()
+
+    if (messageId) {
+      return messageId
     }
   }
 
