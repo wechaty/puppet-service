@@ -1108,8 +1108,13 @@ function puppetImplementation (
       try {
         const roomId = call.request.getId()
         const contactId = call.request.getContactId()
+        const contactIds = call.request.getContactIdsList()
 
-        await puppet.roomDel(roomId, contactId)
+        if (contactIds && contactIds.length > 1) {
+          await puppet.roomDel(roomId, contactId)
+        } else {
+          await puppet.roomDel(roomId, contactId || (contactIds && contactIds[0]) || '')
+        }
 
         return callback(null, new grpcPuppet.RoomDelResponse())
 

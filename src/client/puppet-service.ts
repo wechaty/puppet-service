@@ -1333,13 +1333,20 @@ class PuppetService extends PUPPET.Puppet {
 
   override async roomDel (
     roomId    : string,
-    contactId : string,
+    contactIds : string | string[],
   ): Promise<void> {
-    log.verbose('PuppetService', 'roomDel(%s, %s)', roomId, contactId)
+    log.verbose('PuppetService', 'roomDel(%s, %s)', roomId, contactIds)
 
     const request = new grpcPuppet.RoomDelRequest()
     request.setId(roomId)
-    request.setContactId(contactId)
+    if (Array.isArray(contactIds)) {
+      request.setContactIdsList(contactIds)
+      if (contactIds.length === 1) {
+        request.setContactId(contactIds[0] as string)
+      }
+    } else {
+      request.setId(contactIds)
+    }
 
     await util.promisify(
       this.grpcManager.client.roomDel
