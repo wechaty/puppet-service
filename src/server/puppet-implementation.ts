@@ -94,6 +94,20 @@ function puppetImplementation (
 
   const puppetServerImpl: grpcPuppet.IPuppetServer = {
 
+    conversationRead: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'conversationRead()')
+
+      try {
+        const conversationId = call.request.getConversationId()
+        await puppet.conversationReadMark(conversationId)
+
+        const response = new grpcPuppet.ConversationReadResponse()
+        return callback(null, response)
+      } catch (e) {
+        return grpcError('currentUser', e, callback)
+      }
+    },
+
     contactAlias: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'contactAlias()')
 
