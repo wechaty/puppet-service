@@ -353,7 +353,7 @@ class PuppetService extends PUPPET.Puppet {
 
       default:
         // Huan(202003): in default, the `type` type should be `never`, please check.
-        throw new Error('eventType ' + type + ' unsupported! (code should not reach here)')
+        log.error('eventType ' + type + ' unsupported! (code should not reach here)')
     }
   }
 
