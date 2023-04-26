@@ -1371,14 +1371,21 @@ class PuppetService extends PUPPET.Puppet {
 
   override async roomAdd (
     roomId     : string,
-    contactId  : string,
+    contactIds  : string | string[],
     inviteOnly : boolean,
   ): Promise<void> {
-    log.verbose('PuppetService', 'roomAdd(%s, %s)', roomId, contactId)
+    log.verbose('PuppetService', 'roomAdd(%s, %s)', roomId, contactIds)
 
     const request = new grpcPuppet.RoomAddRequest()
     request.setId(roomId)
-    request.setContactId(contactId)
+    if (Array.isArray(contactIds)) {
+      request.setContactIds(contactIds)
+      if (contactIds.length === 1) {
+        request.setContactId(contactIds[0] as string)
+      }
+    } else {
+      request.setContactId(contactId)
+    }
     request.setInviteOnly(inviteOnly)
 
     await util.promisify(
