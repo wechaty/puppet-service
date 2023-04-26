@@ -99,7 +99,8 @@ function puppetImplementation (
 
       try {
         const conversationId = call.request.getConversationId()
-        await puppet.conversationReadMark(conversationId)
+        const hasRead = call.request.getHasRead()
+        await puppet.conversationReadMark(conversationId, hasRead)
 
         const response = new grpcPuppet.ConversationReadResponse()
         return callback(null, response)

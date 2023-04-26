@@ -752,6 +752,7 @@ class PuppetService extends PUPPET.Puppet {
 
     const request = new grpcPuppet.ConversationReadRequest()
     request.setConversationId(conversationId)
+    request.setHasRead(hasRead)
     await util.promisify(
       this.grpcManager.client.conversationRead
         .bind(this.grpcManager.client),
