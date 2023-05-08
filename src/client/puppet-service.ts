@@ -1126,6 +1126,47 @@ class PuppetService extends PUPPET.Puppet {
     }
   }
 
+  override async messageSendTextV2 (
+    conversationId : string,
+    text           : string[] | string,
+    mentionIdList? : string[],
+  ): Promise<void | string> {
+    log.verbose('PuppetService', 'messageSendV2(%s, %s)', conversationId, JSON.stringify(text))
+
+    const request = new grpcPuppet.MessageSendTextRequest()
+    request.setConversationId(conversationId)
+    if (Array.isArray(text)) {
+      request.setTextList([ text ])
+    } else {
+      request.setTextList(text)
+    }
+    if (typeof mentionIdList !== 'undefined') {
+      request.setMentionalIdsList(mentionIdList)
+    }
+
+    const response = await util.promisify(
+      this.grpcManager.client.messageSendText
+        .bind(this.grpcManager.client),
+    )(request)
+
+    const messageId = response.getId()
+
+    if (messageId) {
+      return messageId
+    }
+
+    {
+      /**
+       * Huan(202110): Deprecated: will be removed after Dec 31, 2022
+       */
+      const messageIdWrapper = response.getIdStringValueDeprecated()
+
+      if (messageIdWrapper) {
+        return messageIdWrapper.getValue()
+      }
+    }
+  }
+
   override async messageSendFile (
     conversationId : string,
     fileBox        : FileBoxInterface,
