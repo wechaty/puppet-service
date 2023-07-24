@@ -2,9 +2,6 @@
   "extends": "@chatie/tsconfig",
   "compilerOptions": {
     "outDir": "dist/esm",
-    "verbatimModuleSyntax": false,
-    // See: https://github.com/wechaty/wechaty/issues/2551
-    "ignoreDeprecations": "5.0"
   },
   "exclude": [
     "node_modules/",
