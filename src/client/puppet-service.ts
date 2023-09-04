@@ -339,6 +339,9 @@ class PuppetService extends PUPPET.Puppet {
       case grpcPuppet.EventType.EVENT_TYPE_ROOM_TOPIC:
         this.emit('room-topic', JSON.parse(payload) as PUPPET.payloads.EventRoomTopic)
         break
+      case grpcPuppet.EventType.EVENT_TYPE_ROOM_ANNOUNCE:
+        this.emit('room-announce', JSON.parse(payload) as PUPPET.payloads.EventRoomAnnounce)
+        break
       case grpcPuppet.EventType.EVENT_TYPE_SCAN:
         this.emit('scan', JSON.parse(payload) as PUPPET.payloads.EventScan)
         break

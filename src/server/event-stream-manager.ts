@@ -266,6 +266,13 @@ class EventStreamManager {
           offCallbackList.push(off)
           break
         }
+        case 'room-announce': {
+          const listener = (payload: PUPPET.payloads.EventRoomAnnounce) => this.grpcEmit(grpcPuppet.EventType.EVENT_TYPE_ROOM_ANNOUNCE, payload)
+          this.puppet.on('room-announce', listener)
+          const off = () => this.puppet.off('room-announce', listener)
+          this.offCallbackList.push(off)
+          break
+        }
         case 'scan': {
           const listener = (payload: PUPPET.payloads.EventScan) => this.grpcEmit(grpcPuppet.EventType.EVENT_TYPE_SCAN, payload)
           this.puppet.on('scan', listener)
