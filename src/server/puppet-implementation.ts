@@ -695,6 +695,34 @@ function puppetImplementation (
       }
     },
 
+    messageChannel: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageChannel()')
+
+      try {
+        const id = call.request.getId()
+
+        const payload = await puppet.messageChannel(id)
+
+        const response = new grpcPuppet.MessageChannelResponse()
+
+        const pbChannelPayload = new grpcPuppet.ChannelPayload()
+        if (payload.avatar) { pbChannelPayload.setAvatar(payload.avatar) }
+        if (payload.coverUrl) { pbChannelPayload.setCoverUrl(payload.coverUrl) }
+        if (payload.desc) { pbChannelPayload.setDesc(payload.desc) }
+        if (payload.extras) { pbChannelPayload.setExtras(payload.extras) }
+        if (payload.feedType) { pbChannelPayload.setFeedType(payload.feedType) }
+        if (payload.nickname) { pbChannelPayload.setNickname(payload.nickname) }
+        if (payload.thumbUrl) { pbChannelPayload.setThumbUrl(payload.thumbUrl) }
+        if (payload.url) { pbChannelPayload.setUrl(payload.url) }
+        response.setChannel(pbChannelPayload)
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageMiniProgram', e, callback)
+      }
+    },
+
     messagePayload: async (call, callback) => {
       log.verbose('PuppetServiceImpl', 'messagePayload()')
 
@@ -989,6 +1017,35 @@ function puppetImplementation (
 
       } catch (e) {
         return grpcError('messageSendUrl', e, callback)
+      }
+    },
+
+    messageSendChannel: async (call, callback) => {
+      log.verbose('PuppetServiceImpl', 'messageSendChannel()')
+
+      try {
+        const conversationId = call.request.getConversationId()
+        const pbChannelPayload = call.request.getChannel()?.toObject()
+
+        if (!pbChannelPayload) {
+          return grpcError('messageSendUrl', new Error().stack, callback)
+        }
+        const payload: PUPPET.payloads.Channel = {
+          ...pbChannelPayload,
+        }
+
+        const messageId = await puppet.messageSendChannel(conversationId, payload)
+
+        const response = new grpcPuppet.MessageSendChannelResponse()
+
+        if (messageId) {
+          response.setId(messageId)
+        }
+
+        return callback(null, response)
+
+      } catch (e) {
+        return grpcError('messageSendChannel', e, callback)
       }
     },
 
