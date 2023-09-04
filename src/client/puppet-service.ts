@@ -744,12 +744,20 @@ class PuppetService extends PUPPET.Puppet {
    * Conversation
    *
    */
-  override conversationReadMark (
+  override async conversationReadMark (
     conversationId: string,
     hasRead = true,
   ) : Promise<void> {
     log.verbose('PuppetService', 'conversationMarkRead(%s, %s)', conversationId, hasRead)
-    return PUPPET.throwUnsupportedError('not implemented. See https://github.com/wechaty/wechaty-puppet/pull/132')
+
+    const request = new grpcPuppet.ConversationReadRequest()
+    request.setConversationId(conversationId)
+    request.setHasRead(hasRead)
+    await util.promisify(
+      this.grpcManager.client.conversationRead
+        .bind(this.grpcManager.client),
+    )(request)
+
   }
 
   /**
