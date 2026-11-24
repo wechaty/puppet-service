@@ -1,5 +1,13 @@
 # wechaty-puppet-service
 
+> [!IMPORTANT]
+> **This repository has moved.** `wechaty-puppet-service` is now developed in the Wechaty monorepo at
+> [`packages/wechaty-puppet-service`](https://github.com/wechaty/wechaty/tree/main/packages/wechaty-puppet-service),
+> with its full history ([wechaty/wechaty#3054](https://github.com/wechaty/wechaty/issues/3054)).
+> Version 2.0 (`npm install wechaty-puppet-service@next`) is published from there.
+> Please open issues and pull requests in [wechaty/wechaty](https://github.com/wechaty/wechaty).
+> This repository is archived and read-only.
+
 [![NPM Version](https://badge.fury.io/js/wechaty-puppet-service.svg)](https://www.npmjs.com/package/wechaty-puppet-service)
 [![NPM](https://github.com/wechaty/wechaty-puppet-service/workflows/NPM/badge.svg)](https://github.com/wechaty/wechaty-puppet-service/actions?query=workflow%3ANPM)
 [![ES Modules](https://img.shields.io/badge/ES-Modules-brightgreen)](https://github.com/Chatie/tsconfig/issues/16)
